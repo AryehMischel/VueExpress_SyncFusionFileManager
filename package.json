@@ -1,0 +1,35 @@
+{
+  "name": "vueexpress-syncfusionfilemanager",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "concurrently \"npm run backend\" \"npm run frontend\"",
+    "backend": "node backend/app.js",
+    "frontend": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@syncfusion/ej2-base": "^28.1.33",
+    "@syncfusion/ej2-vue-filemanager": "^28.1.33",
+    "axios": "^1.7.9",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jquery": "^3.7.1",
+    "jquery-ui": "^1.14.1",
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.11.5",
+    "vue": "^3.5.13",
+    "vuex": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.32",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "concurrently": "^9.1.0",
+    "vite": "^6.0.1"
+  }
+}

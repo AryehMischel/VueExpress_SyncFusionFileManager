@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + Vue</title>
+    <link
+      rel="stylesheet"
+      href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"
+    />
+    <style>
+      body {
+        max-width: 100vw;
+        overflow-x: hidden;
+        max-height: 100vh;
+        overflow-y: hidden;
+      }
+
+      
+    </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+<script>
+
+</script>
+
+<script>
+    const panel = $("#app").draggable();
+    const snapThreshold = 10; // pixels from edge to trigger snap
+
+    panel.draggable({
+      handle: "#file-manager_toolbar",
+      containment: "window", // Keep panel within window bounds
+      start: function () {
+        $(this).css("transform", "none");
+      },
+      stop: function (event, ui) {
+        const window_width = $(window).width();
+        const window_height = $(window).height();
+        const panel_width = panel.innerWidth();
+        const panel_height = panel.innerHeight();
+
+        // let { left, top } = ui.position;
+        // let snapped = false;
+
+        // // Snap to left edge
+        // if (left < snapThreshold) {
+        //   left = 0;
+        //   snapped = true;
+        // }
+
+        // // Snap to right edge
+        // if (left > window_width - panel_width - snapThreshold) {
+        //   left = window_width - panel_width;
+        //   snapped = true;
+        // }
+
+        // // Snap to top edge
+        // if (top < snapThreshold) {
+        //   top = 0;
+        //   snapped = true;
+        // }
+
+        // // Snap to bottom edge
+        // if (top > window_height - panel_height - snapThreshold) {
+        //   top = window_height - panel_height;
+        //   snapped = true;
+        // }
+
+        // // Only animate if we're snapping
+        // if (snapped) {
+        //   panel.animate(
+        //     {
+        //       left: left,
+        //       top: top,
+        //     },
+        //     200
+        //   );
+        // }
+      },
+    });
+</script>
