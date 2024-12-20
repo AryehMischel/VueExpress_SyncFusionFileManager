@@ -71,6 +71,7 @@ export const ajaxSettings = {
   export const uploadSettings = {
     showFileUploadDialog: false,
     allowUpload: true,
+    AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
   };
 
   
