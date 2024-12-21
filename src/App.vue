@@ -97,6 +97,11 @@ const onBeforeSend = async (args) => {
         const fileManagerInstance = fileManagerRef.value?.ej2Instances;
         fileManagerInstance.refreshFiles();
       } catch (error) {
+        if(error.response.status === 409){
+          console.log("file already exists");
+          console.log("prompt user to either overwrite or rename file");
+
+        } 
         console.error("Error saving file info:", error);
       }
     }

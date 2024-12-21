@@ -389,3 +389,21 @@ export const uploadFile = (req, res) => {
     });
   });
 };
+
+export const checkDuplicateFile = (name, folderId, callback) => {
+  
+  let sql;
+  
+  if(folderId === null){
+    sql = "SELECT * FROM files WHERE name = ? AND folder_id is ?";
+  }else{
+    sql = "SELECT * FROM files WHERE name = ? AND folder_id = ?";
+  }
+  db.query(sql, [name, folderId], (err, results) => {
+    if (err) {
+      return callback(err);
+    }
+    console.log("results", results);
+    return callback(null, results.length > 0);
+  });
+}
