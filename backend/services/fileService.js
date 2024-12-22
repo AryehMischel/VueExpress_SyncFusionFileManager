@@ -23,6 +23,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
           dateModified: new Date().toISOString(),
           type: "file",
           isFile: true,
+          format_360 : file.format_360,
           hasChild: false,
           filterPath: "/",
         }));
@@ -81,7 +82,11 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
             isFile: true,
             hasChild: false,
             filterPath: filterPath,
+            id: file.id,
+            format_360 : file.format_360,
           }));
+
+          console.log("files", files);
 
           const folders = folderResults.map((folder) => ({
             name: folder.name,
@@ -95,10 +100,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
 
           res.json({
             cwd: {
-              name: path
-                .split("/")
-                .filter((segment) => segment)
-                .pop(),
+              name: path,
               size: 0,
               dateModified: new Date().toISOString(),
               type: "directory",
@@ -358,16 +360,16 @@ export const uploadFile = (req, res) => {
     }
     var sql;
     if (folderId === null) {
-      sql = `INSERT INTO files (name) VALUES (?)`;
+      sql = `INSERT INTO files (name, format_360) VALUES (?, ?)`;
     } else {
-      sql = `INSERT INTO files (name, folder_id) VALUES (?, ?)`;
+      sql = `INSERT INTO files (name, format_360, folder_id) VALUES (?, ?, ?)`;
     }
-    db.query(sql, [name, folderId], (err, result) => {
+    db.query(sql, [name, "processing", folderId], (err, result) => {
       if (err) {
         console.error(err);
         res.status(500).send("An error occurred");
       } else {
-
+        const insertedId = result.insertId;
         return res.json({
           cwd: null,
           files: [
@@ -378,6 +380,7 @@ export const uploadFile = (req, res) => {
               hasChild: false,
               isFile: true,
               name: name,
+              id: insertedId,
               size: 0,
               type: "",
             },

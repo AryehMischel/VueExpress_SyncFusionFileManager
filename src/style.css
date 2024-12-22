@@ -58,6 +58,10 @@ button:focus-visible {
   padding: 2em;
 }
 
+.specialCase {
+  color: #ff0000;
+}
+
 #app {
   max-width: 1280px;
   min-width: 1000px;

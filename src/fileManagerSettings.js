@@ -63,6 +63,13 @@ export const ajaxSettings = {
         template: '<span class="e-fe-size">${size}</span>',
         format: "n2",
       },
+      {
+        field: "format_360",
+        headerText: "360 Format",
+        template: '<span class="e-fe-size">${format_360}</span>',
+        format: "n2",
+
+      },
     ],
   };
   
@@ -71,6 +78,7 @@ export const ajaxSettings = {
   export const uploadSettings = {
     showFileUploadDialog: false,
     allowUpload: true,
+    // autoUpload: false,
     AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
   };
 
