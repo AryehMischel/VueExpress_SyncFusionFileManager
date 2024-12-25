@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import path from "path";
 import { handleFileManagerActions } from "../controllers/fileManagerController.js";
-import { uploadFile, checkDuplicateFile, getCWDId } from '../services/fileService.js';
+import { uploadFile, checkDuplicateFile, getCWDId, update } from '../services/fileService.js';
 const router = express.Router();
 
 // Multer setup for file uploads
@@ -43,6 +43,7 @@ const upload = multer({ storage: storage });
 router.post("/upload", checkDuplicateFileMiddleware, uploadFile);
 router.post("/actions", handleFileManagerActions);
 router.post("/save", save);
+router.post("/update", update);
 
 function save(){
   console.log("save") 

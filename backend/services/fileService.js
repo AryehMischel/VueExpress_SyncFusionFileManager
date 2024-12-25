@@ -410,3 +410,39 @@ export const checkDuplicateFile = (name, folderId, callback) => {
     return callback(null, results.length > 0);
   });
 }
+
+export const update = (req, res) => {
+
+
+
+try{
+  let sql = "UPDATE files SET format_360 = ? WHERE id = ?";
+  db.query(sql, [req.body.format, req.body.id], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).send("An error occurred");
+    } else {
+      return res.json({
+        cwd: null,
+        files: [
+          {
+            dateModified: new Date().toISOString(),
+            dateCreated: new Date().toISOString(),
+            filterPath: req.body.path,
+            hasChild: false,
+            isFile: true,
+            name: req.body.name,
+            id: req.body.id,
+            size: 0,
+            type: "",
+          },
+        ],
+        details: null,
+        error: null,
+      });
+    }
+  });
+}catch(e){
+  console.log(e);
+}
+}

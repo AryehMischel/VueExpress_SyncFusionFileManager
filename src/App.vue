@@ -51,11 +51,10 @@ provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
 // Reactive state... not really using this atm
 const fileManagerRef = ref(null);
 
+// AKA Current Working Directory
 const state = reactive({
   currentPath: "/",
 });
-
-
 
 //image processing
 var imageQueue = [];
@@ -66,41 +65,44 @@ const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
 const messageQueue = [];
 
-function createWebWorkers(){
+function createWebWorkers() {
   for (let i = 0; i < workerCount; i++) {
-    const worker = new Worker(new URL('./workers/worker.js', import.meta.url));
-  worker.onmessage = async function (e) {
-    console.log("worker response: ", e.data);
+    const worker = new Worker(new URL("./workers/worker.js", import.meta.url));
+    worker.onmessage = async function (e) {
+      console.log("worker response: ", e.data);
 
-    // Handle the worker response
-    if (e.data.jobCompleted === "detect_360_Format") {
-      console.log("web worker detects ...", e.data.format, " for image ", e.data.imageID);
-      // Save the format to the database
-      try {
-        const response = await axios.post(
-          "http://localhost:3000/api/filemanager/update",
-          {
-            id: e.data.imageID,
-            format: e.data.format,
-          }
+      // Handle the worker response
+      if (e.data.jobCompleted === "detect_360_Format") {
+        console.log(
+          "web worker detects ...",
+          e.data.format,
+          " for image ",
+          e.data.imageID
         );
-        console.log("Format saved:", response.data);
-      } catch (error) {
-        console.error("Error saving format:", error);
+        // Save the format to the database
+        try {
+          const response = await axios.post(
+            "http://localhost:3000/api/filemanager/update",
+            {
+              id: e.data.imageID,
+              format: e.data.format,
+            }
+          );
+          console.log("Format saved:", response.data);
+          fileManagerInstance.refreshFiles();
+        } catch (error) {
+          console.error("Error saving format:", error);
+        }
       }
-    }
 
-    workerStatus[i] = false;
+      workerStatus[i] = false;
+    };
 
-  };
-
-  workers.push(worker);
-}
-
+    workers.push(worker);
+  }
 }
 
 window.createWebWorkers = createWebWorkers;
-
 
 // Event handlers
 const onBeforeSend = async (args) => {
@@ -132,21 +134,17 @@ const onBeforeSend = async (args) => {
     console.log("Uploading file:", args);
     args.cancel = true; // Prevent the default upload behavior
 
-
     // sanitize input
-    
 
     const data = JSON.parse(args.ajaxSettings.data);
     console.log("data unparsed", args.ajaxSettings);
-    let ajaxData = args.ajaxSettings
+    let ajaxData = args.ajaxSettings;
     window.ajaxData = ajaxData;
     let ajaxDataParsed = ajaxData.data;
     console.log("data parsed", ajaxDataParsed);
     window.ajaxDataParsed = ajaxDataParsed;
     const fileInfo = data.find((item) => item.filename);
     const path = data[0].path;
-
-  
 
     if (fileInfo) {
       const { filename, size } = fileInfo;
@@ -164,11 +162,6 @@ const onBeforeSend = async (args) => {
             dateModified: new Date().toISOString(),
             dateCreated: new Date().toISOString(),
           }
-
-
-
-
-          
         );
 
         console.log("File saved:", response.data.files[0]);
@@ -180,9 +173,9 @@ const onBeforeSend = async (args) => {
         );
 
         // response.data.files[0].name,
-        try{
-        processImage(file, response.data.files[0].id);
-        } catch(err){
+        try {
+          processImage(file, response.data.files[0].id);
+        } catch (err) {
           console.log("error processing image", err);
         }
         // Customize the ajaxSettings to send custom arguments
@@ -208,16 +201,6 @@ const onBeforeSend = async (args) => {
       }
     }
 
-    // const file = args.ajaxSettings.data.rawFile;
-    // const imageUrl = URL.createObjectURL(file);
-
-    //     // Create an img element and set its src attribute
-    //     const imgElement = document.createElement('img');
-    //     imgElement.src = imageUrl;
-    //     imgElement.alt = "Uploaded Image";
-
-    //     // Append the img element to the document body
-    //     document.body.appendChild(imgElement);
   }
 };
 
@@ -231,18 +214,14 @@ const onBeforePopupOpen = (args) => {
 const onFileLoad = (args) => {
   console.log("File loaded:", args);
   if (args.fileDetails.isFile) {
-    console.log("file loaded is a file", args.element.childNodes);
-
-    args.element.childNodes[2].className = ''; // Clear all existing classes
-    args.element.childNodes[2].classList.add("specialCase"); // Add the new class
 
 
-    args.element.childNodes[5].className = ''; // Clear all existing classes
-    args.element.childNodes[5].classList.add("specialCase"); // Add the new class
-
-    // if (args.fileDetails._fm_iconClass === "specialCase fm-image") {
-    //   console.log("file loaded is an image");
-    // }
+    if (args.element.childNodes.length > 5) {
+      console.log("file loaded is a file");
+      args.element.childNodes[5].classList.add("specialCase"); // Add the new class
+    } else {
+      console.log(args.element.children[0].children[2].classList.add("specialCase"));
+    }
 
   }
 };
@@ -301,11 +280,9 @@ function processImage(file, id) {
   if (availableWorkerIndex !== -1) {
     console.log("worker is available");
     workerStatus[availableWorkerIndex] = true; // Mark the worker as busy
-    workers[availableWorkerIndex].postMessage({ file, id});
+    workers[availableWorkerIndex].postMessage({ file, id });
   }
-
 }
-
 </script>
 
 <style src="./App.css"></style>

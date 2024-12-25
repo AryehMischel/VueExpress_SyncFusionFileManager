@@ -117,7 +117,7 @@ self.onmessage = async function (event) {
                 return "stereoEqrt";
             // addFormatIcon(this.name, "stereoEqrt"); createStereoEqrtTexture(this); break;
             default:
-                self.postMessage({ work: "detect_360_Format", format: "noFormatDetected", imageID });
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "noFormatDetected", imageID });
                 // if (generateThumbnail) {
                 //     createThumbNail('eqrt', bitmap, imageID)
                 // }
