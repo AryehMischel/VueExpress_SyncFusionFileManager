@@ -5,11 +5,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USERNAME,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE, 
+  host: process.env.RDS_ENDPOINT, // RDS endpoint
+  user: process.env.RDS_USER,
+  password: process.env.RDS_PASSWORD,
+  database: process.env.RDS_DATABASE,
+  port: process.env.RDS_PORT || 3306, // Default MySQL port
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
+
 
 export const connectToDatabase = () => {
   db.getConnection((err) => {

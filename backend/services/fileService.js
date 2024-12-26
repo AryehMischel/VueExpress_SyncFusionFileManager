@@ -1,4 +1,5 @@
 import db from "./dbService.js";
+import { generateUploadURL } from "./s3-service.js";
 
 export const getActiveFilesAndFolders = (path, filterPath, res) => {
   if (path === "/") {
@@ -23,9 +24,10 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
           dateModified: new Date().toISOString(),
           type: "file",
           isFile: true,
-          format_360 : file.format_360,
+          format_360: file.format_360,
           hasChild: false,
           filterPath: "/",
+          processed: file.processed,
         }));
 
         const folders = folderResults.map((folder) => ({
@@ -83,7 +85,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
             hasChild: false,
             filterPath: filterPath,
             id: file.id,
-            format_360 : file.format_360,
+            format_360: file.format_360,
           }));
 
           console.log("files", files);
@@ -360,9 +362,9 @@ export const uploadFile = (req, res) => {
     }
     var sql;
     if (folderId === null) {
-      sql = `INSERT INTO files (name, format_360) VALUES (?, ?)`;
+      sql = `INSERT INTO files (name, format_360, processed) VALUES (?, ?, false)`;
     } else {
-      sql = `INSERT INTO files (name, format_360, folder_id) VALUES (?, ?, ?)`;
+      sql = `INSERT INTO files (name, format_360, folder_id, processed) VALUES (?, ?, ?, false)`;
     }
     db.query(sql, [name, "processing", folderId], (err, result) => {
       if (err) {
@@ -383,6 +385,7 @@ export const uploadFile = (req, res) => {
               id: insertedId,
               size: 0,
               type: "",
+              processed: false,
             },
           ],
           details: null,
@@ -394,12 +397,11 @@ export const uploadFile = (req, res) => {
 };
 
 export const checkDuplicateFile = (name, folderId, callback) => {
-  
   let sql;
-  
-  if(folderId === null){
+
+  if (folderId === null) {
     sql = "SELECT * FROM files WHERE name = ? AND folder_id is ?";
-  }else{
+  } else {
     sql = "SELECT * FROM files WHERE name = ? AND folder_id = ?";
   }
   db.query(sql, [name, folderId], (err, results) => {
@@ -409,40 +411,54 @@ export const checkDuplicateFile = (name, folderId, callback) => {
     console.log("results", results);
     return callback(null, results.length > 0);
   });
-}
+};
 
-export const update = (req, res) => {
+//update the database and get presigned url from s3
+export const update = async (req, res) => {
+  let url;
+  try {
+    console.log("Generating upload URL", req.body.extension);
+    url = await generateUploadURL(req.body.extension);
+  } catch (error) {
+    console.error("Error generating upload URL:", error);
+    res.status(500).send("Error generating upload URL");
+  }
 
 
 
-try{
-  let sql = "UPDATE files SET format_360 = ? WHERE id = ?";
-  db.query(sql, [req.body.format, req.body.id], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send("An error occurred");
-    } else {
+  try {
+    const { format, id, path, name } = req.body;
+    const objectKey = url.split('?')[0].split('/').pop(); //url.split("/").pop() + "." + req.body.extension;
+    const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf('.'));
+    const sql = "UPDATE files SET format_360 = ?, s3_key = ? WHERE id = ?";
+    db.query(sql, [format, objectKeyWithoutExtension, id], (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("An error occurred");
+      }
+
       return res.json({
         cwd: null,
         files: [
           {
             dateModified: new Date().toISOString(),
             dateCreated: new Date().toISOString(),
-            filterPath: req.body.path,
+            filterPath: path,
             hasChild: false,
             isFile: true,
-            name: req.body.name,
-            id: req.body.id,
+            name: name,
+            id: id,
             size: 0,
             type: "",
+            url: url,
           },
         ],
         details: null,
         error: null,
       });
-    }
-  });
-}catch(e){
-  console.log(e);
-}
-}
+    });
+  } catch (err) {
+    console.error("Error updating file:", err);
+    return res.status(500).send("An error occurred");
+  }
+};

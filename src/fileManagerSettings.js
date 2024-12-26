@@ -70,9 +70,15 @@ export const ajaxSettings = {
         format: "n2",
 
       },
+      {
+        field: "processed",
+        headerText: "Processed",
+        template: '<span>${processed}</span>',
+      },
     ],
   };
-  
+
+
   export const breadcrumbBarSettings = { visible: true };
   
   export const uploadSettings = {

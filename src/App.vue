@@ -64,7 +64,8 @@ const workerCount = 4;
 const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
 const messageQueue = [];
-
+let currFile;
+let currFileType;
 function createWebWorkers() {
   for (let i = 0; i < workerCount; i++) {
     const worker = new Worker(new URL("./workers/worker.js", import.meta.url));
@@ -86,9 +87,21 @@ function createWebWorkers() {
             {
               id: e.data.imageID,
               format: e.data.format,
+              extension: currFileType,
             }
           );
           console.log("Format saved:", response.data);
+          console.log("s3 url", response.data.files[0].url);
+
+          // upload the file to S3
+          const res = await fetch(response.data.files[0].url, {
+            method: "PUT",
+            headers: {
+              "Content-Type": currFile.type,
+            },
+            body: currFile,
+          });
+
           fileManagerInstance.refreshFiles();
         } catch (error) {
           console.error("Error saving format:", error);
@@ -107,30 +120,16 @@ window.createWebWorkers = createWebWorkers;
 // Event handlers
 const onBeforeSend = async (args) => {
   console.log("Before Send:", args);
-  // Find the file input element in the DOM
-  const fileInput = document.querySelector("#file-manager_upload");
-  const file = fileInput.files[0];
-  // 1). send to webworker for classification and preprocessing
-  // 2). Create temp "files" in file manager view for photos being processed
-  // 3). on success, save them correctly in server update view
-
-  // if (fileInput && fileInput.files.length > 0) {
-  //   const file = fileInput.files[0];
-  //   const imageUrl = URL.createObjectURL(file);
-
-  //   // Create an img element and set its src attribute
-  //   const imgElement = document.createElement("img");
-  //   imgElement.src = imageUrl;
-  //   imgElement.alt = "Uploaded Image";
-
-  //   // Append the img element to the document body
-  //   document.body.appendChild(imgElement);
-
-  //   // Store the image URL in the data property
-  //   this.imageUrl = imageUrl;
-  // }
 
   if (args.action === "Upload") {
+    // Find the file input element in the DOM
+    const fileInput = document.querySelector("#file-manager_upload");
+    const file = fileInput.files[0];
+    currFile = file;
+    currFileType = file.type.split("/").pop();
+    console.log("file type", currFileType);
+    console.log("file", file);
+
     console.log("Uploading file:", args);
     args.cancel = true; // Prevent the default upload behavior
 
@@ -200,7 +199,6 @@ const onBeforeSend = async (args) => {
         console.error("Error saving file info:", error);
       }
     }
-
   }
 };
 
@@ -214,15 +212,14 @@ const onBeforePopupOpen = (args) => {
 const onFileLoad = (args) => {
   console.log("File loaded:", args);
   if (args.fileDetails.isFile) {
-
-
     if (args.element.childNodes.length > 5) {
       console.log("file loaded is a file");
       args.element.childNodes[5].classList.add("specialCase"); // Add the new class
     } else {
-      console.log(args.element.children[0].children[2].classList.add("specialCase"));
+      console.log(
+        args.element.children[0].children[2].classList.add("specialCase")
+      );
     }
-
   }
 };
 
