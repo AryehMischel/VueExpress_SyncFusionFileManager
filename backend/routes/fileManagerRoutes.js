@@ -3,6 +3,10 @@ import multer from "multer";
 import path from "path";
 import { handleFileManagerActions } from "../controllers/fileManagerController.js";
 import { uploadFile, checkDuplicateFile, getCWDId, update } from '../services/fileService.js';
+
+// Importing the getImages function from the fileService.js file
+// import { getImages } from '../services/testing.js';
+
 const router = express.Router();
 
 // Multer setup for file uploads
@@ -44,6 +48,9 @@ router.post("/upload", checkDuplicateFileMiddleware, uploadFile);
 router.post("/actions", handleFileManagerActions);
 router.post("/save", save);
 router.post("/update", update);
+
+// just testing how to structure backend for our 360 images
+// router.get("/getImages", getImages);
 
 function save(){
   console.log("save") 
