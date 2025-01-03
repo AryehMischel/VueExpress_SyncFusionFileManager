@@ -1,10 +1,10 @@
 import db from "./dbService.js";
 import { generateUploadURL } from "./s3-service.js";
 
-export const getActiveFilesAndFolders = (path, filterPath, res) => {
+export const getActiveFilesAndFolders = (userId, path, filterPath, res) => {
   if (path === "/") {
-    const sqlFiles = "SELECT * FROM files WHERE folder_id IS NULL";
-    const sqlFolders = "SELECT * FROM folders WHERE parent_id IS NULL";
+    const sqlFiles = `SELECT * FROM image_groups WHERE folder_id IS NULL and user_id = ${userId}`;
+    const sqlFolders = `SELECT * FROM folders WHERE parent_id IS NULL and user_id = ${userId}`;
 
     db.query(sqlFiles, (err, fileResults) => {
       if (err) {
@@ -24,7 +24,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
           dateModified: new Date().toISOString(),
           type: "file",
           isFile: true,
-          format_360: file.format_360,
+          format_360: file.image_format,
           hasChild: false,
           filterPath: "/",
           processed: file.processed,
@@ -61,16 +61,18 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
         return res.status(500).send("An error occurred");
       }
 
-      const sqlFiles = "SELECT * FROM files WHERE folder_id = ?";
-      const sqlFolders = "SELECT * FROM folders WHERE parent_id = ?";
+      const sqlFiles =
+        "SELECT * FROM image_groups WHERE folder_id = ? and user_id = ?";
+      const sqlFolders =
+        "SELECT * FROM folders WHERE parent_id = ? and user_id = ?"; //we could also make folder id's unique if we wanted to simplify this query
 
-      db.query(sqlFiles, [folderId], (err, fileResults) => {
+      db.query(sqlFiles, [folderId, userId], (err, fileResults) => {
         if (err) {
           console.error("Error querying files:", err);
           return res.status(500).send("An error occurred");
         }
 
-        db.query(sqlFolders, [folderId], (err, folderResults) => {
+        db.query(sqlFolders, [folderId, userId], (err, folderResults) => {
           if (err) {
             console.error("Error querying folders:", err);
             return res.status(500).send("An error occurred");
@@ -85,7 +87,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
             hasChild: false,
             filterPath: filterPath,
             id: file.id,
-            format_360: file.format_360,
+            format_360: file.image_format,
           }));
 
           console.log("files", files);
@@ -118,7 +120,7 @@ export const getActiveFilesAndFolders = (path, filterPath, res) => {
   }
 };
 
-export const deleteFilesFromDatabase = (data, callback) => {
+export const deleteFilesFromDatabase = (data, userId, callback) => {
   const path = data.path;
   const names = data.names;
   getCWDId(path, (err, folderId) => {
@@ -129,9 +131,9 @@ export const deleteFilesFromDatabase = (data, callback) => {
 
     var sql;
     if (folderId === null) {
-      sql = `DELETE FROM files WHERE folder_id is ? AND name IN (${placeholders})`;
+      sql = `DELETE FROM image_groups WHERE folder_id is ? AND name IN (${placeholders}) and user_id = ${userId}`;
     } else {
-      sql = `DELETE FROM files WHERE folder_id= ? AND name IN (${placeholders})`;
+      sql = `DELETE FROM image_groups WHERE folder_id= ? AND name IN (${placeholders}) and user_id = ${userId}`;
     }
 
     db.query(sql, [folderId, ...names], (err, result) => {
@@ -158,7 +160,7 @@ export const deleteFilesFromDatabase = (data, callback) => {
   });
 };
 
-export const deleteFoldersFromDatabase = (data, callback) => {
+export const deleteFoldersFromDatabase = (data, userId, callback) => {
   const path = data.path;
   const names = data.names;
   console.log(path, names);
@@ -171,9 +173,9 @@ export const deleteFoldersFromDatabase = (data, callback) => {
     const placeholders = names.map(() => "?").join(",");
     var sql;
     if (parentId === null) {
-      sql = `DELETE FROM folders WHERE parent_id is ? AND name IN (${placeholders})`;
+      sql = `DELETE FROM folders WHERE parent_id is ? AND name IN (${placeholders}) and user_id = ${userId}`;
     } else {
-      sql = `DELETE FROM folders WHERE parent_id = ? AND name IN (${placeholders})`;
+      sql = `DELETE FROM folders WHERE parent_id = ? AND name IN (${placeholders}) and user_id = ${userId}`;
     }
 
     db.query(sql, [parentId, ...names], (err, result) => {
@@ -201,45 +203,83 @@ export const deleteFoldersFromDatabase = (data, callback) => {
   });
 };
 
-export const getCWDId = (path, callback) => {
-  if (path === "/") {
-    return callback(null, null); // Root folder
-  }
-  console.log("handling non root directory");
-  ``;
-  const pathSegments = path.split("/").filter((segment) => segment);
-  let currentParentId = null;
+// export const getCWDId = (path, callback) => {
+//   if (path === "/") {
+//     return callback(null, null); // Root folder
+//   }
+//   console.log("handling non root directory");
+//   ``;
+//   const pathSegments = path.split("/").filter((segment) => segment);
+//   let currentParentId = null;
 
-  const getNextFolderId = (index) => {
-    if (index >= pathSegments.length) {
-      return callback(null, currentParentId);
-    }
-    const segment = pathSegments[index];
-    let sql;
-    let params;
-    if (currentParentId === null) {
-      sql = "SELECT id FROM folders WHERE name = ? AND parent_id IS NULL";
-      params = [segment];
-    } else {
-      sql = "SELECT id FROM folders WHERE name = ? AND parent_id = ?";
-      params = [segment, currentParentId];
-    }
-    db.query(sql, params, (err, results) => {
-      if (err) {
-        return callback(err);
-      }
-      if (results.length === 0) {
-        return callback(new Error("Folder not found"));
-      }
-      currentParentId = results[0].id;
-      getNextFolderId(index + 1);
-    });
-  };
+//   const getNextFolderId = (index) => {
+//     if (index >= pathSegments.length) {
+//       return callback(null, currentParentId);
+//     }
+//     const segment = pathSegments[index];
+//     let sql;
+//     let params;
+//     if (currentParentId === null) {
+//       sql = "SELECT id FROM folders WHERE name = ? AND parent_id IS NULL";
+//       params = [segment];
+//     } else {
+//       sql = "SELECT id FROM folders WHERE name = ? AND parent_id = ?";
+//       params = [segment, currentParentId];
+//     }
+//     db.query(sql, params, (err, results) => {
+//       if (err) {
+//         return callback(err);
+//       }
+//       if (results.length === 0) {
+//         return callback(new Error("Folder not found"));
+//       }
+//       currentParentId = results[0].id;
+//       getNextFolderId(index + 1);
+//     });
+//   };
 
-  getNextFolderId(0);
+//   getNextFolderId(0);
+// };
+export const getCWDId = (path) => {
+  return new Promise((resolve, reject) => {
+    if (path === "/") {
+      return resolve(null); // Root folder
+    }
+    console.log("handling non root directory");
+
+    const pathSegments = path.split("/").filter((segment) => segment);
+    let currentParentId = null;
+
+    const getNextFolderId = (index) => {
+      if (index >= pathSegments.length) {
+        return resolve(currentParentId);
+      }
+      const segment = pathSegments[index];
+      let sql;
+      let params;
+      if (currentParentId === null) {
+        sql = "SELECT id FROM folders WHERE name = ? AND parent_id IS NULL";
+        params = [segment];
+      } else {
+        sql = "SELECT id FROM folders WHERE name = ? AND parent_id = ?";
+        params = [segment, currentParentId];
+      }
+      db.query(sql, params, (err, results) => {
+        if (err) {
+          return reject(err);
+        }
+        if (results.length === 0) {
+          return reject(new Error("Folder not found"));
+        }
+        currentParentId = results[0].id;
+        getNextFolderId(index + 1);
+      });
+    };
+
+    getNextFolderId(0);
+  });
 };
-
-export const deleteItemsFromDatabase = (data, res) => {
+export const deleteItemsFromDatabase = (data, userId, res) => {
   const { path, names, data: items } = data;
   const files = items.filter((item) => item.isFile);
   const folders = items.filter((item) => !item.isFile);
@@ -259,6 +299,7 @@ export const deleteItemsFromDatabase = (data, res) => {
     if (files.length > 0) {
       deleteFilesFromDatabase(
         { path, names: files.map((file) => file.name) },
+        userId,
         (fileErr, fileResult) => {
           if (fileErr) {
             console.error("Error deleting files:", fileErr);
@@ -281,6 +322,7 @@ export const deleteItemsFromDatabase = (data, res) => {
       console.log("is this firing?");
       deleteFoldersFromDatabase(
         { path, names: folders.map((folder) => folder.name) },
+        userId,
         (folderErr, folderResult) => {
           if (folderErr) {
             console.error("Error deleting folders:", folderErr);
@@ -303,12 +345,13 @@ export const deleteItemsFromDatabase = (data, res) => {
   });
 };
 
-export const createFolder = (data, res) => {
-  const name = data.name;
-  console.log("name", name);
-  getCWDId(data.path, (err, parent_id) => {
-    const sql = "INSERT INTO folders (name, parent_id) VALUES (?, ?)";
-    db.query(sql, [name, parent_id], (err, result) => {
+export const createFolder = (folderName, path, userId, res) => {
+  const name = folderName;
+  console.log("userid: ", userId);
+  getCWDId(path, (err, parent_id) => {
+    const sql =
+      "INSERT INTO folders (name, parent_id, user_id) VALUES (?, ?, ?)";
+    db.query(sql, [name, parent_id, userId], (err, result) => {
       if (err) {
         console.error("Error getting parent ID:", err);
         return res.status(500).json({
@@ -329,7 +372,7 @@ export const createFolder = (data, res) => {
               {
                 dateModified: new Date().toISOString(),
                 dateCreated: new Date().toISOString(),
-                filterPath: data.path,
+                filterPath: path,
                 hasChild: false,
                 isFile: false,
                 name: name,
@@ -347,13 +390,9 @@ export const createFolder = (data, res) => {
 };
 
 export const uploadFile = (req, res) => {
-  console.log(req.body);
-  console.log("uploading file from upload file function...");
+  let userId = req.user.userId;
   var name = req.body.name;
   var path = req.body.path;
-  console.log("name", name);
-  console.log("path", path);
-  console.log(req.body);
 
   getCWDId(path, (err, folderId) => {
     if (err) {
@@ -362,9 +401,9 @@ export const uploadFile = (req, res) => {
     }
     var sql;
     if (folderId === null) {
-      sql = `INSERT INTO files (name, format_360, processed) VALUES (?, ?, false)`;
+      sql = `INSERT INTO image_groups (name, image_format, processed, user_id) VALUES (?, ?, false, ${userId})`;
     } else {
-      sql = `INSERT INTO files (name, format_360, folder_id, processed) VALUES (?, ?, ?, false)`;
+      sql = `INSERT INTO image_groups (name, image_format, folder_id, processed, user_id) VALUES (?, ?, ?, false, ${userId})`;
     }
     db.query(sql, [name, "processing", folderId], (err, result) => {
       if (err) {
@@ -372,6 +411,7 @@ export const uploadFile = (req, res) => {
         res.status(500).send("An error occurred");
       } else {
         const insertedId = result.insertId;
+        console.log("insertedId", insertedId);
         return res.json({
           cwd: null,
           files: [
@@ -396,20 +436,23 @@ export const uploadFile = (req, res) => {
   });
 };
 
-export const checkDuplicateFile = (name, folderId, callback) => {
-  let sql;
+export const checkDuplicateFile = (name, folderId, userId) => {
+  return new Promise((resolve, reject) => {
+    let sql;
 
-  if (folderId === null) {
-    sql = "SELECT * FROM files WHERE name = ? AND folder_id is ?";
-  } else {
-    sql = "SELECT * FROM files WHERE name = ? AND folder_id = ?";
-  }
-  db.query(sql, [name, folderId], (err, results) => {
-    if (err) {
-      return callback(err);
+    if (folderId === null) {
+      sql = "SELECT * FROM image_groups WHERE name = ? AND folder_id is ? and user_id = ?";
+    } else {
+      sql = "SELECT * FROM image_groups WHERE name = ? AND folder_id = ? and user_id = ?";
     }
-    console.log("results", results);
-    return callback(null, results.length > 0);
+
+    db.query(sql, [name, folderId, userId], (err, results) => {
+      if (err) {
+        return reject(err);
+      }
+      console.log("results", results);
+      resolve(results.length > 0);
+    });
   });
 };
 
@@ -424,38 +467,56 @@ export const update = async (req, res) => {
     res.status(500).send("Error generating upload URL");
   }
 
-
+  // , s3_key = ? objectKeyWithoutExtension,
 
   try {
     const { format, id, path, name } = req.body;
-    const objectKey = url.split('?')[0].split('/').pop(); //url.split("/").pop() + "." + req.body.extension;
-    const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf('.'));
-    const sql = "UPDATE files SET format_360 = ?, s3_key = ? WHERE id = ?";
-    db.query(sql, [format, objectKeyWithoutExtension, id], (err, result) => {
+    const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
+    const objectKeyWithoutExtension = objectKey.substring(
+      0,
+      objectKey.lastIndexOf(".")
+    );
+    //update image_groups
+    const sql = "UPDATE image_groups SET image_format = ? WHERE id = ? and user_id = ?";
+
+    //update images -> this will obviously need to be refactored to handle multiple images
+    const sql2 = "INSERT INTO images (s3_key, group_id) VALUES (?, ?)";
+    db.query(sql, [format, id, req.user.userId], (err, result) => {
       if (err) {
         console.error(err);
         return res.status(500).send("An error occurred");
       }
 
-      return res.json({
-        cwd: null,
-        files: [
-          {
-            dateModified: new Date().toISOString(),
-            dateCreated: new Date().toISOString(),
-            filterPath: path,
-            hasChild: false,
-            isFile: true,
-            name: name,
-            id: id,
-            size: 0,
-            type: "",
-            url: url,
-          },
-        ],
-        details: null,
-        error: null,
-      });
+      db.query(
+        sql2,
+        [objectKeyWithoutExtension, id, req.user.userId],
+        (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).send("An error occurred");
+          }
+
+          return res.json({
+            cwd: null,
+            files: [
+              {
+                dateModified: new Date().toISOString(),
+                dateCreated: new Date().toISOString(),
+                filterPath: path,
+                hasChild: false,
+                isFile: true,
+                name: name,
+                id: id,
+                size: 0,
+                type: "",
+                url: url,
+              },
+            ],
+            details: null,
+            error: null,
+          });
+        }
+      );
     });
   } catch (err) {
     console.error("Error updating file:", err);

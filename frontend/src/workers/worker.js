@@ -80,7 +80,7 @@ self.onmessage = async function (event) {
             //   createCubeStripTexture(this); break;
 
             case 2:
-                self.postMessage({ jobCompleted: "detect_360_Format", format: "eqrt", imageID });
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID });
                 if (generateThumbnail) {
                     await createThumbNail('eqrt', bitmap, imageID)
                 }

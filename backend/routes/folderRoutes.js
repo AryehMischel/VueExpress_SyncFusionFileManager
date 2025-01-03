@@ -1,9 +1,16 @@
 import express from "express";
 const router = express.Router();
 
+
+// Middleware to ensure the user is authenticated
+// function ensureAuthenticated(req, res, next) {
+//   if (req.isAuthenticated()) {
+//     return next();
+//   }
+//   res.redirect("/fail"); // Redirect to fail page if not authenticated
+// }
 // Define a route to create a new folder
 router.post('/create-folder', (req, res) => {
-
   // Logic to create a new folder
   res.send('Folder created');
 });

@@ -1,6 +1,11 @@
 import { getActiveFilesAndFolders, createFolder, deleteItemsFromDatabase } from "../services/fileService.js";
 
+
+
+
+
 export const handleFileManagerActions = (req, res) => {
+  const userId = req.user.userId;
   const { action, path, filterPath, name } = req.body;
   console.log(req.body);
 
@@ -8,13 +13,13 @@ export const handleFileManagerActions = (req, res) => {
   switch (action) {
     case "read":
       // GET CURRENT DIRECTORY ID
-      getActiveFilesAndFolders(path, filterPath, res);
+      getActiveFilesAndFolders(userId, path, filterPath, res);
       break;
     case "create":
-      createFolder(req.body, res);
+      createFolder(req.body.name, req.body.path, req.user.userId, res);
       break;
     case "delete":
-        deleteItemsFromDatabase(req.body, res);
+        deleteItemsFromDatabase(req.body, userId, res);
       break;
     case "save":
       console.log("uploading file from main page...");

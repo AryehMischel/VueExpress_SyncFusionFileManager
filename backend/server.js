@@ -45,7 +45,14 @@ app.use(
   })
 );
 
+
+// Sync the session store
 sessionStore.sync();
+
+// Reset the session store
+// sessionStore.sync({ force: true }).then(() => {
+//   console.log('Session store reset');
+// });
 
 app.use(passport.initialize());
 app.use(passport.session());

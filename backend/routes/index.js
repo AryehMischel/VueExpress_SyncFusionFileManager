@@ -22,7 +22,9 @@ router.get(
   "/dashboard",
   ensureAuthenticated,
   (req, res) => {
-    console.log("User found");
+    const userId = req.user.userId;
+    console.log("User found: ", userId);
+
     // res.sendFile(path.join(__dirname, '../public', 'index.html'));
     res.sendFile(path.join(__dirname, '../public/dist/', 'index.html')); // Serve the built index.html
   }
