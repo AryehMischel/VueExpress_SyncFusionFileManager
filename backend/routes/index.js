@@ -23,7 +23,7 @@ router.get(
   ensureAuthenticated,
   (req, res) => {
     const userId = req.user.userId;
-    console.log("User found: ", userId);
+    // console.log("User found: ", userId);
 
     // res.sendFile(path.join(__dirname, '../public', 'index.html'));
     res.sendFile(path.join(__dirname, '../public/dist/', 'index.html')); // Serve the built index.html
@@ -32,7 +32,7 @@ router.get(
 
 // Route to handle authentication failure
 router.get("/fail", (req, res) => {
-    console.log("User not found");
+    // console.log("User not found");
   res.sendFile(path.join(__dirname, '../public', 'blocked.html'));
 });
 

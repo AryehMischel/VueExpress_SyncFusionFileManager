@@ -3,7 +3,7 @@
 let maxThumbnailSize = 5;
 let generateThumbnail = false;
 self.onmessage = async function (event) {
-    console.log("worker received message asdhfgaskjdhfgaksjhdfgaksjhdfgakjsdhfgaksjdhfgaksjdhfgakjsdhgf")
+    // console.log("worker received message")
     const imageFile = event.data.file;
     const imageID = event.data.id;
     var bitmap = null;
@@ -11,7 +11,7 @@ self.onmessage = async function (event) {
     const imageFiles = event.data.imageFiles;
 
     if (imageFiles) {
-        console.log("handlign a cubemap")
+        // console.log("handling a cubemap")
     } else {
 
 
@@ -80,7 +80,8 @@ self.onmessage = async function (event) {
             //   createCubeStripTexture(this); break;
 
             case 2:
-                self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID });
+                console.log("height: " + bitmap.height, "width: " + bitmap.width);
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID, width: bitmap.width, height: bitmap.height, face: 0});
                 if (generateThumbnail) {
                     await createThumbNail('eqrt', bitmap, imageID)
                 }

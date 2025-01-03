@@ -70,31 +70,41 @@ function createWebWorkers() {
   for (let i = 0; i < workerCount; i++) {
     const worker = new Worker(new URL("./workers/worker.js", import.meta.url));
     worker.onmessage = async function (e) {
-      console.log("worker response: ", e.data);
+      // console.log("worker response: ", e.data);
 
       // Handle the worker response
       if (e.data.jobCompleted === "detect_360_Format") {
-        console.log(
-          "web worker detects ...",
-          e.data.format,
-          " for image ",
-          e.data.imageID
-        );
         // Save the format to the database
         try {
-          const response = await axios.post(
-            "http://localhost:3000/api/filemanager/update",
+          //update the image group with the determined format
+          const response = await axios.patch(
+            "http://localhost:3000/api/filemanager/image-group",
             {
               id: e.data.imageID,
               format: e.data.format,
-              extension: currFileType,
             }
           );
-          console.log("Format saved:", response.data);
-          console.log("s3 url", response.data.files[0].url);
 
-          // upload the file to S3
-          const res = await fetch(response.data.files[0].url, {
+          fileManagerInstance.refreshFiles();
+        } catch (error) {
+          console.error("Error saving format:", error);
+        }
+
+        try {
+          // create image faces in image table, and grab presigned urls
+          const response = await axios.post(
+            "http://localhost:3000/api/filemanager/s3",
+            {
+              imageGroupId: e.data.imageID,
+              height: e.data.height,
+              width: e.data.width,
+              faceCount: 1,
+            }
+          );
+
+
+         // upload the image faces to S3 using presigned urls
+          const res = await fetch(response.data.files[0].urls[0], {
             method: "PUT",
             headers: {
               "Content-Type": currFile.type,
@@ -102,7 +112,13 @@ function createWebWorkers() {
             body: currFile,
           });
 
-          fileManagerInstance.refreshFiles();
+          if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        console.log("File uploaded successfully");
+          //update the database
+
+
         } catch (error) {
           console.error("Error saving format:", error);
         }
@@ -119,7 +135,7 @@ window.createWebWorkers = createWebWorkers;
 
 // Event handlers
 const onBeforeSend = async (args) => {
-  console.log("Before Send:", args);
+  // console.log("Before Send:", args);
 
   if (args.action === "Upload") {
     // Find the file input element in the DOM
@@ -127,20 +143,20 @@ const onBeforeSend = async (args) => {
     const file = fileInput.files[0];
     currFile = file;
     currFileType = file.type.split("/").pop();
-    console.log("file type", currFileType);
-    console.log("file", file);
+    // console.log("file type", currFileType);
+    // console.log("file", file);
 
-    console.log("Uploading file:", args);
+    // console.log("Uploading file:", args);
     args.cancel = true; // Prevent the default upload behavior
 
     // sanitize input
 
     const data = JSON.parse(args.ajaxSettings.data);
-    console.log("data unparsed", args.ajaxSettings);
+    // console.log("data unparsed", args.ajaxSettings);
     let ajaxData = args.ajaxSettings;
     window.ajaxData = ajaxData;
     let ajaxDataParsed = ajaxData.data;
-    console.log("data parsed", ajaxDataParsed);
+    // console.log("data parsed", ajaxDataParsed);
     window.ajaxDataParsed = ajaxDataParsed;
     const fileInfo = data.find((item) => item.filename);
     const path = data[0].path;
@@ -163,13 +179,13 @@ const onBeforeSend = async (args) => {
           }
         );
 
-        console.log("File saved:", response.data.files[0]);
-        console.log(
-          "detected format for image ",
-          response.data.files[0].name,
-          " of id ",
-          response.data.files[0].id
-        );
+        // console.log("File saved:", response.data.files[0]);
+        // console.log(
+        //   "detected format for image ",
+        //   response.data.files[0].name,
+        //   " of id ",
+        //   response.data.files[0].id
+        // );
 
         // response.data.files[0].name,
         try {
@@ -194,7 +210,6 @@ const onBeforeSend = async (args) => {
       } catch (error) {
         if (error.response.status === 409) {
           console.log("file already exists");
-          console.log("prompt user to either overwrite or rename file");
         }
         console.error("Error saving file info:", error);
       }
@@ -210,21 +225,19 @@ const onBeforePopupOpen = (args) => {
 };
 
 const onFileLoad = (args) => {
-  console.log("File loaded:", args);
+  // console.log("File loaded:", args);
   if (args.fileDetails.isFile) {
     if (args.element.childNodes.length > 5) {
-      console.log("file loaded is a file");
+      // console.log("file loaded is a file");
       args.element.childNodes[5].classList.add("specialCase"); // Add the new class
     } else {
-      console.log(
-        args.element.children[0].children[2].classList.add("specialCase")
-      );
+      // console.log(args.element.children[0].children[2].classList.add("specialCase"));
     }
   }
 };
 
 const onSuccess = (args) => {
-  console.log("Success:", args);
+  // console.log("Success:", args);
   if (args.action === "read") {
     state.currentPath = args.result.cwd.name;
     window.currentPath = state.currentPath;
@@ -261,7 +274,7 @@ onMounted(() => {
   createWebWorkers();
   const fileManagerInstance = fileManagerRef.value?.ej2Instances;
   window.fileManagerInstance = fileManagerInstance;
-  console.log("FileManager instance:", fileManagerInstance);
+  // console.log("FileManager instance:", fileManagerInstance);
   if (fileManagerInstance) {
     window.refreshFileManager = () => {
       fileManagerInstance.refreshFiles();
