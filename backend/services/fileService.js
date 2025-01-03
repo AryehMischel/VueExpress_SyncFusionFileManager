@@ -562,10 +562,10 @@ export const getS3URLS = async (req, res) => {
  console.log("getting s3 urls...")
  //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12
   let urls = [];
-  let { imageGroupId, faceCount, height, width, path} = req.body;
+  let { imageGroupId, faceCount, height, width, path, fileExtension} = req.body;
 
   for (let i = 0; i < faceCount; i++) {
-    const url = await generateUploadURL(req.body.extension); //this will only matter when handling unprocessed images. like eqrt
+    const url = await generateUploadURL(fileExtension); //this will only matter when handling unprocessed images. like eqrt
     urls.push(url);
   }
 

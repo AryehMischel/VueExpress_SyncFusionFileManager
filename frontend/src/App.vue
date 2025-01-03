@@ -74,53 +74,8 @@ function createWebWorkers() {
 
       // Handle the worker response
       if (e.data.jobCompleted === "detect_360_Format") {
-        // Save the format to the database
-        try {
-          //update the image group with the determined format
-          const response = await axios.patch(
-            "http://localhost:3000/api/filemanager/image-group",
-            {
-              id: e.data.imageID,
-              format: e.data.format,
-            }
-          );
-
-          fileManagerInstance.refreshFiles();
-        } catch (error) {
-          console.error("Error saving format:", error);
-        }
-
-        try {
-          // create image faces in image table, and grab presigned urls
-          const response = await axios.post(
-            "http://localhost:3000/api/filemanager/s3",
-            {
-              imageGroupId: e.data.imageID,
-              height: e.data.height,
-              width: e.data.width,
-              faceCount: 1,
-            }
-          );
-
-
-         // upload the image faces to S3 using presigned urls
-          const res = await fetch(response.data.files[0].urls[0], {
-            method: "PUT",
-            headers: {
-              "Content-Type": currFile.type,
-            },
-            body: currFile,
-          });
-
-          if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        console.log("File uploaded successfully");
-          //update the database
-
-
-        } catch (error) {
-          console.error("Error saving format:", error);
+        if (e.data.format === "equirectangular") {
+          handleEqrt(e);
         }
       }
 
@@ -128,6 +83,64 @@ function createWebWorkers() {
     };
 
     workers.push(worker);
+  }
+}
+
+async function handleEqrt(e) {
+  console.log("image file type from web worker", e.data.imageFileType);
+  const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp"];
+  const fileExtension = currFileType.split("/").pop().toLowerCase();
+  if (imageExtensions.includes(fileExtension)) {
+    console.log("Image file type detected:", fileExtension);
+  } else {
+    console.log("Non-image file type detected:", fileExtension);
+  }
+  // Save the format to the database
+  try {
+    //update the image group with the determined format
+    const response = await axios.patch(
+      "http://localhost:3000/api/filemanager/image-group",
+      {
+        id: e.data.imageID,
+        format: e.data.format,
+      }
+    );
+
+    fileManagerInstance.refreshFiles();
+  } catch (error) {
+    console.error("Error saving format:", error);
+  }
+
+  try {
+    // create image faces in image table, and grab presigned urls
+    const response = await axios.post(
+      "http://localhost:3000/api/filemanager/s3",
+      {
+        imageGroupId: e.data.imageID,
+        height: e.data.height,
+        width: e.data.width,
+        faceCount: 1,
+        fileExtension: fileExtension,
+      }
+    );
+
+    // console.log("myFuckingFileType", currFile.type);
+    // upload the image faces to S3 using presigned urls
+    const res = await fetch(response.data.files[0].urls[0], {
+      method: "PUT",
+      headers: {
+        "Content-Type": e.data.imageFileType,
+      },
+      body: currFile,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    console.log("File uploaded successfully");
+    //update the database
+  } catch (error) {
+    console.error("Error saving format:", error);
   }
 }
 
@@ -142,7 +155,8 @@ const onBeforeSend = async (args) => {
     const fileInput = document.querySelector("#file-manager_upload");
     const file = fileInput.files[0];
     currFile = file;
-    currFileType = file.type.split("/").pop();
+    console.log("currFile type", currFile.type);
+    //currFileType = file.type.split("/").pop();
     // console.log("file type", currFileType);
     // console.log("file", file);
 
@@ -164,6 +178,8 @@ const onBeforeSend = async (args) => {
     if (fileInfo) {
       const { filename, size } = fileInfo;
       const fileType = filename.split(".").pop();
+      console.log("file type", fileType);
+      currFileType = fileType
 
       try {
         // Save file information to the tempFiles table

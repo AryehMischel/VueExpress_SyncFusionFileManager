@@ -5,6 +5,7 @@ let generateThumbnail = false;
 self.onmessage = async function (event) {
     // console.log("worker received message")
     const imageFile = event.data.file;
+    let imageFileType = imageFile.type;
     const imageID = event.data.id;
     var bitmap = null;
 
@@ -81,7 +82,7 @@ self.onmessage = async function (event) {
 
             case 2:
                 console.log("height: " + bitmap.height, "width: " + bitmap.width);
-                self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID, width: bitmap.width, height: bitmap.height, face: 0});
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID, width: bitmap.width, height: bitmap.height, face: 0, imageFileType});
                 if (generateThumbnail) {
                     await createThumbNail('eqrt', bitmap, imageID)
                 }
@@ -109,7 +110,7 @@ self.onmessage = async function (event) {
                 break;
 
             case 1:
-                self.postMessage({ jobCompleted: "detect_360_Format", format: "stereoEqrt", imageID});
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "stereo_equirectangular", imageID});
                 let stereoEqrtBitmaps = await processStereoEqrt(bitmap);
                 if (generateThumbnail) {
                     createThumbNail('stereoEqrt', bitmap, imageID)
