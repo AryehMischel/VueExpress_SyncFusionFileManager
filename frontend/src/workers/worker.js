@@ -84,9 +84,9 @@ self.onmessage = async function (event) {
             case 2:
                 console.log("height: " + bitmap.height, "width: " + bitmap.width);
                 self.postMessage({ jobCompleted: "detect_360_Format", format: "equirectangular", imageID, width: bitmap.width, height: bitmap.height, faceCount: 1, imageFileType, clientImageId});
-                if (generateThumbnail) {
-                    await createThumbNail('eqrt', bitmap, imageID)
-                }
+                // if (generateThumbnail) {
+                //     await createThumbNail('eqrt', bitmap, imageID)
+                // }
                 // self.postMessage({ work: "createTexture", format: "eqrt", bitmap, imageID }, bitmap);
                 return "eqrt";
             //   addFormatIcon(this.name, "eqrt");
@@ -113,10 +113,10 @@ self.onmessage = async function (event) {
             case 1:
                 if(bitmap.height % 2 != 0){console.error("height is not even on stereoEqrt")}
                 self.postMessage({ jobCompleted: "detect_360_Format", format: "stereo_equirectangular", imageID, width: bitmap.width, height: bitmap.height, faceCount: 1, imageFileType, clientImageId});
-                let stereoEqrtBitmaps = await processStereoEqrt(bitmap);
-                if (generateThumbnail) {
-                    createThumbNail('stereoEqrt', bitmap, imageID)
-                }
+                // let stereoEqrtBitmaps = await processStereoEqrt(bitmap);
+                // if (generateThumbnail) {
+                //     createThumbNail('stereoEqrt', bitmap, imageID)
+                // }
                 // self.postMessage({ work: "createTexture", format: "stereoEqrt", bitmaps: stereoEqrtBitmaps, imageID }, stereoEqrtBitmaps);
                 return "stereoEqrt";
             // addFormatIcon(this.name, "stereoEqrt"); createStereoEqrtTexture(this); break;

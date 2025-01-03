@@ -76,7 +76,7 @@ function createWebWorkers() {
       if (e.data.jobCompleted === "detect_360_Format") {
         if (e.data.format === "equirectangular") {
           handleEqrt(e);
-        } else if (e.data.format === "cubemap") {
+        } else if (e.data.format === "stereo_equirectangular") {
           handleStereoEqrt(e);
         }
       }
@@ -151,9 +151,10 @@ async function handleEqrt(e) {
 }
 
 async function handleStereoEqrt(e) {
+
+  console.log("detected stereo equirectangular image");
   //update image group with determined format
   try {
-
     const response = await axios.patch(
       "http://localhost:3000/api/filemanager/image-group",
       {
@@ -167,14 +168,43 @@ async function handleStereoEqrt(e) {
     console.error("Error saving format:", error);
   }
 
+
   //For now we will upload the source file as is. In the future we may want to crop the image into two faces here.
-
   //create image faces in image table, and grab presigned urls
-  
-
-
-
   //upload the image faces to S3 using presigned urls
+
+  try {
+    // create image faces in image table, and grab presigned urls
+    const response = await axios.post(
+      "http://localhost:3000/api/filemanager/s3",
+      {
+        imageGroupId: e.data.imageID,
+        height: e.data.height,
+        width: e.data.width,
+        faceCount: e.data.faceCount,
+        fileExtension: images[e.data.clientImageId].fileExtension,
+      }
+    );
+
+    // upload the image faces to S3 using presigned urls
+    const res = await fetch(response.data.files[0].urls[0], {
+      method: "PUT",
+      headers: {
+        "Content-Type": e.data.imageFileType,
+      },
+      body: images[e.data.clientImageId].file,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    console.log("File uploaded successfully");
+    //update the database
+  } catch (error) {
+    console.error("Error saving format:", error);
+  }
+
+
 }
 
 window.createWebWorkers = createWebWorkers;
