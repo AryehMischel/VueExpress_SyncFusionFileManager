@@ -559,37 +559,38 @@ export const updateImageGroup = async (req, res) => {
 // });
 
 export const getS3URLS = async (req, res) => {
- console.log("getting s3 urls...")
- //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12
-  let urls = [];
-  let { imageGroupId, faceCount, height, width, path, fileExtension} = req.body;
+  console.log("getting s3 urls...");
+  //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12
+  let {
+    imageGroupId,
+    height,
+    width,
+    path,
+    fileExtension,
+    imageFormat,
+  } = req.body;
 
-  for (let i = 0; i < faceCount; i++) {
-    const url = await generateUploadURL(fileExtension); //this will only matter when handling unprocessed images. like eqrt
-    urls.push(url);
-  }
+  const url = await generateUploadURL(fileExtension, imageFormat); //this will only matter when handling unprocessed images. like eqrt
 
-  let sqlInsertStatement =
-    "INSERT INTO images (s3_key, group_id, face_index, height, width) VALUES (?, ?, ?, ?, ?)";
+  let sqlInsertStatement = "INSERT INTO images (s3_key, group_id, height, width) VALUES (?, ?, ?, ?)";
 
-  for (let i = 0; i < faceCount; i++) {
-    const objectKey = urls[i].split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
-    const objectKeyWithoutExtension = objectKey.substring( 0, objectKey.lastIndexOf("."));
-    db.query(
-      sqlInsertStatement,
-      [objectKeyWithoutExtension, imageGroupId, i, height, width],
-      (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.status(500).send("An error occurred");
-        }
+  const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
+  const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf("."));
+
+  db.query(
+    sqlInsertStatement,
+    [objectKeyWithoutExtension, imageGroupId, height, width],
+    (err, result) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).send("An error occurred");
       }
-    );
-  }
+    }
+  );
 
   return res.json({
     cwd: null,
-    files: [
+    file:
       {
         dateModified: new Date().toISOString(),
         dateCreated: new Date().toISOString(),
@@ -599,9 +600,8 @@ export const getS3URLS = async (req, res) => {
         // id: id,
         size: 0,
         type: "",
-        urls: urls,
+        url: url,
       },
-    ],
     details: null,
     error: null,
   });

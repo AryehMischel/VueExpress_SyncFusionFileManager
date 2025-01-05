@@ -34,7 +34,8 @@ self.onmessage = async function (event) {
 
 
             let imageRatio = Math.round((bitmap.width / bitmap.height) * 10) / 10;
-            let format = findFormat(imageRatio);
+            console.log("image ratio: " + imageRatio);
+            let format = await  findFormat(imageRatio);
 
 
 
@@ -71,13 +72,14 @@ self.onmessage = async function (event) {
 
             case 6:
                 //self.postMessage({ work: "setFormat", format: "stripCubeMap", imageID });
-                self.postMessage({ jobCompleted: "detect_360_Format", format: "stripCubeMap", imageID});
-                // let cubeStripBitmaps = await processCubeStrip(bitmap);
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "cubemap", imageID, width: bitmap.width, height: bitmap.height, faceCount: 1, imageFileType, clientImageId});
+                return "cubemap";
+                //let cubeStripBitmaps = await processCubeStrip(bitmap);
                 // if (generateThumbnail) {
                 //     await createThumbNail("cubeMap", cubeStripBitmaps[5], imageID);
                 // }
                 // self.postMessage({ work: "createTexture", format: "cubeMap", bitmaps: cubeStripBitmaps, imageID }, cubeStripBitmaps);
-                return "stripCubeMap";
+                //return "stripCubeMap";
             //   addFormatIcon(this.name, "stripCubeMap");
             //   createCubeStripTexture(this); break;
 

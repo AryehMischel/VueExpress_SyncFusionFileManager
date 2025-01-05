@@ -78,7 +78,11 @@ function createWebWorkers() {
           handleEqrt(e);
         } else if (e.data.format === "stereo_equirectangular") {
           handleStereoEqrt(e);
+        }else if (e.data.format === "cubemap") {
+          handleCubemap(e);
         }
+      } else if (e.data.jobCompleted === "processed_cube_faces") {
+        processCubeFaces(e);
       }
 
       workerStatus[i] = false;
@@ -89,21 +93,13 @@ function createWebWorkers() {
 }
 
 async function handleEqrt(e) {
-  // console.log("file is", images[e.data.clientImageId]);
-  // console.log("image file type from web worker", e.data.imageFileType);
-  // const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "tiff", "webp"];
-  // const fileExtension = currFileType.split("/").pop().toLowerCase();
-  // if (imageExtensions.includes(fileExtension)) {
-  //   console.log("Image file type detected:", fileExtension);
-  // } else {
-  //   console.log("Non-image file type detected:", fileExtension);
-  // }
-  // // Save the format to the database
 
-  console.log("file extension", images[e.data.clientImageId].fileExtension);
-  console.log("file type", images[e.data.clientImageId].fileType);
-  console.log("file", images[e.data.clientImageId].file);
+
+  // console.log("file extension", images[e.data.clientImageId].fileExtension);
+  // console.log("file type", images[e.data.clientImageId].fileType);
+  // console.log("file", images[e.data.clientImageId].file);
   try {
+ 
     //update the image group with the determined format
     const response = await axios.patch(
       "http://localhost:3000/api/filemanager/image-group",
@@ -119,20 +115,20 @@ async function handleEqrt(e) {
   }
 
   try {
-    // create image faces in image table, and grab presigned urls
+    // create image face in image table, and grab presigned url
     const response = await axios.post(
       "http://localhost:3000/api/filemanager/s3",
       {
         imageGroupId: e.data.imageID,
         height: e.data.height,
         width: e.data.width,
-        faceCount: e.data.faceCount,
         fileExtension: images[e.data.clientImageId].fileExtension,
+        imageFormat: e.data.format,
       }
     );
 
     // upload the image faces to S3 using presigned urls
-    const res = await fetch(response.data.files[0].urls[0], {
+    const res = await fetch(response.data.file.url, {
       method: "PUT",
       headers: {
         "Content-Type": e.data.imageFileType,
@@ -181,13 +177,13 @@ async function handleStereoEqrt(e) {
         imageGroupId: e.data.imageID,
         height: e.data.height,
         width: e.data.width,
-        faceCount: e.data.faceCount,
         fileExtension: images[e.data.clientImageId].fileExtension,
+        imageFormat: e.data.format,
       }
     );
 
-    // upload the image faces to S3 using presigned urls
-    const res = await fetch(response.data.files[0].urls[0], {
+    // upload the image to S3 using presigned urls
+    const res = await fetch(response.data.file.url, {
       method: "PUT",
       headers: {
         "Content-Type": e.data.imageFileType,
@@ -206,6 +202,60 @@ async function handleStereoEqrt(e) {
 
 
 }
+
+async function handleCubemap(e){
+  try {
+    //update the image group with the determined format
+    const response = await axios.patch(
+      "http://localhost:3000/api/filemanager/image-group",
+      {
+        id: e.data.imageID,
+        format: e.data.format,
+      }
+    );
+
+    fileManagerInstance.refreshFiles();
+  } catch (error) {
+    console.error("Error saving format:", error);
+  }
+   try {
+    // create image faces in image table, and grab presigned urls
+    const response = await axios.post(
+      "http://localhost:3000/api/filemanager/s3",
+      {
+        imageGroupId: e.data.imageID,
+        height: e.data.height,
+        width: e.data.width,
+        fileExtension: images[e.data.clientImageId].fileExtension,
+        imageFormat: e.data.format,
+      }
+    );
+
+    // upload the image faces to S3 using presigned urls
+    const res = await fetch(response.data.file.url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": e.data.imageFileType,
+      },
+      body: images[e.data.clientImageId].file,
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`);
+    }
+    console.log("File uploaded successfully");
+    //update the database
+  } catch (error) {
+    console.error("Error saving format:", error);
+  }
+
+
+}
+
+async function processCubeFaces(e){
+ console.log("process cube faces")
+}
+
 
 window.createWebWorkers = createWebWorkers;
 
