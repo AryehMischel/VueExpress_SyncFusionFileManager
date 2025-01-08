@@ -84,8 +84,11 @@ export const ajaxSettings = {
   export const uploadSettings = {
     showFileUploadDialog: false,
     allowUpload: true,
+    maxFileSize: 50 * 1024 * 1024, // 50 MB
     // autoUpload: false,
-    AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
+    AllowedExtensions: "jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
+    // AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
+
   };
 
   

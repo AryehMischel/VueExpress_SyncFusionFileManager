@@ -1,5 +1,5 @@
 import db from "./dbService.js";
-import { generateUploadURL } from "./s3-service.js";
+import { generateUploadURL } from "./s3Service.js";
 
 export const getActiveFilesAndFolders = async (
   userId,
@@ -366,32 +366,29 @@ export const createFolder = async (folderName, path, userId, res) => {
   });
 };
 
-export const uploadFile = async (req, res) => {
-  let userId = req.user.userId;
-  var name = req.body.name;
-  var path = req.body.path;
+export const uploadFile = async (userId, name, path) => {
   let folderId;
   try {
     folderId = await getCWDId(path);
   } catch (err) {
     console.error("Error getting folder ID by path:", err);
-    return res.status(500).send("An error occurred");
+    throw new Error("An error occurred while getting folder ID");
   }
 
-  var sql;
-  if (folderId === null) {
-    sql = `INSERT INTO image_groups (name, image_format, processed, user_id) VALUES (?, ?, false, ${userId})`;
-  } else {
-    sql = `INSERT INTO image_groups (name, image_format, folder_id, processed, user_id) VALUES (?, ?, ?, false, ${userId})`;
-  }
-  db.query(sql, [name, "processing", folderId], (err, result) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send("An error occurred");
-    } else {
+  const sql = folderId === null
+    ? `INSERT INTO image_groups (name, image_format, processed, user_id) VALUES (?, ?, false, ${userId})`
+    : `INSERT INTO image_groups (name, image_format, folder_id, processed, user_id) VALUES (?, ?, ?, false, ${userId})`;
+
+  return new Promise((resolve, reject) => {
+    db.query(sql, [name, "processing", folderId], (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return reject(new Error("An error occurred while inserting into the database"));
+      }
+
       const insertedId = result.insertId;
       console.log("insertedId", insertedId);
-      return res.json({
+      resolve({
         cwd: null,
         files: [
           {
@@ -410,16 +407,63 @@ export const uploadFile = async (req, res) => {
         details: null,
         error: null,
       });
-    }
+    });
   });
 };
+
+// export const uploadFile = async (req, res) => {
+//   let userId = req.user.userId;
+//   var name = req.body.name;
+//   var path = req.body.path;
+//   let folderId;
+//   try {
+//     folderId = await getCWDId(path);
+//   } catch (err) {
+//     console.error("Error getting folder ID by path:", err);
+//     return res.status(500).send("An error occurred");
+//   }
+
+//   var sql;
+//   if (folderId === null) {
+//     sql = `INSERT INTO image_groups (name, image_format, processed, user_id) VALUES (?, ?, false, ${userId})`;
+//   } else {
+//     sql = `INSERT INTO image_groups (name, image_format, folder_id, processed, user_id) VALUES (?, ?, ?, false, ${userId})`;
+//   }
+//   db.query(sql, [name, "processing", folderId], (err, result) => {
+//     if (err) {
+//       console.error(err);
+//       res.status(500).send("An error occurred");
+//     } else {
+//       const insertedId = result.insertId;
+//       console.log("insertedId", insertedId);
+//       return res.json({
+//         cwd: null,
+//         files: [
+//           {
+//             dateModified: new Date().toISOString(),
+//             dateCreated: new Date().toISOString(),
+//             filterPath: path,
+//             hasChild: false,
+//             isFile: true,
+//             name: name,
+//             id: insertedId,
+//             size: 0,
+//             type: "",
+//             processed: false,
+//           },
+//         ],
+//         details: null,
+//         error: null,
+//       });
+//     }
+//   });
+// };
 
 export const checkDuplicateFile = (name, folderId, userID, callback) => {
   let sql;
 
   if (folderId === null) {
-    sql =
-      "SELECT * FROM image_groups WHERE name = ? AND folder_id is ? and user_id = ? ";
+    sql ="SELECT * FROM image_groups WHERE name = ? AND folder_id is ? and user_id = ? ";
   } else {
     sql =
       "SELECT * FROM image_groups WHERE name = ? AND folder_id = ? and user_id = ? ";
@@ -433,179 +477,90 @@ export const checkDuplicateFile = (name, folderId, userID, callback) => {
   });
 };
 
-// split this into seperate functions.
+export const checkDuplicateFolder = (name, folderId, userID, callback) => {
+  let sql;
 
-//update the database and get presigned url from s3
-
-//updates image group with image type
-//inserts image into images table for eqrt image
-// generating s3 upload url
-
-export const update = async (req, res) => {
-  let url;
-  try {
-    console.log("Generating upload URL", req.body.extension);
-    url = await generateUploadURL(req.body.extension);
-  } catch (error) {
-    console.error("Error generating upload URL:", error);
-    res.status(500).send("Error generating upload URL");
+  if (folderId === null) {
+    sql ="SELECT * FROM folders WHERE name = ? AND parent_id is ? and user_id = ? ";
+  } else {
+    sql =
+      "SELECT * FROM folders WHERE name = ? AND parent_id = ? and user_id = ? ";
   }
-
-  // , s3_key = ? objectKeyWithoutExtension,
-
-  try {
-    const { format, id, path, name } = req.body;
-    const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
-    const objectKeyWithoutExtension = objectKey.substring(
-      0,
-      objectKey.lastIndexOf(".")
-    );
-    //update image_groups
-    const sql =
-      "UPDATE image_groups SET image_format = ? WHERE id = ? and user_id = ?";
-
-    //update images -> this will obviously need to be refactored to handle multiple images
-    const sql2 =
-      "INSERT INTO images (s3_key, group_id, face_index, height, width) VALUES (?, ?, ?, ?, ?)";
-    db.query(sql, [format, id, req.user.userId], (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).send("An error occurred");
-      }
-
-      db.query(
-        sql2,
-        [
-          objectKeyWithoutExtension,
-          id,
-          req.body.face,
-          req.body.height,
-          req.body.width,
-        ],
-        (err, result) => {
-          if (err) {
-            console.error(err);
-            return res.status(500).send("An error occurred");
-          }
-
-          return res.json({
-            cwd: null,
-            files: [
-              {
-                dateModified: new Date().toISOString(),
-                dateCreated: new Date().toISOString(),
-                filterPath: path,
-                hasChild: false,
-                isFile: true,
-                name: name,
-                id: id,
-                size: 0,
-                type: "",
-                url: url,
-              },
-            ],
-            details: null,
-            error: null,
-          });
-        }
-      );
-    });
-  } catch (err) {
-    console.error("Error updating file:", err);
-    return res.status(500).send("An error occurred");
-  }
+  db.query(sql, [name, folderId, userID], (err, results) => {
+    if (err) {
+      return callback(err);
+    }
+    console.log("results", results);
+    return callback(null, results.length > 0);
+  });
 };
 
-//update the image group with the image format
-export const updateImageGroup = async (req, res) => {
-  const { format, id } = req.body;
-  const sql =
-    "UPDATE image_groups SET image_format = ? WHERE id = ? and user_id = ?";
-  db.query(sql, [format, id, req.user.userId], (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).send("An error occurred");
-    } else {
-      res.json({
+
+export const updateImageFormat = async (format, id, userId) => {
+  const sql = "UPDATE image_groups SET image_format = ? WHERE id = ? and user_id = ?";
+  
+  return new Promise((resolve, reject) => {
+    db.query(sql, [format, id, userId], (err, result) => {
+      if (err) {
+        console.error("Database error:", err);
+        return reject(new Error("An error occurred while updating the image format"));
+      }
+      resolve({
         success: true,
         message: "Image group updated successfully",
       });
-    }
+    });
   });
 };
 
-// here we first create all the images for the image group based on the image format
-// then we generate the s3 urls for each image
-// then we update the images with the s3 urls
-// then we send the s3 urls back to the client
+// export const getS3URL = async (req, res) => {
+//   console.log("getting s3 urls...");
+//   //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12
+//   let {
+//     imageGroupId,
+//     height,
+//     width,
+//     path,
+//     fileExtension,
+//     imageFormat,
+//   } = req.body;
 
-//bulk insert
-// const values = [];
-// for (let i = 0; i < faceCount; i++) {
-//   values.push([urls[i], imageGroupId, i, height, width]);
-// }
+//   const url = await generateUploadURL(fileExtension, imageFormat); //this will only matter when handling unprocessed images. like eqrt
 
-// const sqlInsertStatement = `
-//   INSERT INTO images (s3_key, group_id, face_index, height, width)
-//   VALUES ?
-// `;
+//   let sqlInsertStatement = "INSERT INTO images (s3_key, group_id, height, width) VALUES (?, ?, ?, ?)";
 
-// db.query(sqlInsertStatement, [values], (err, result) => {
-//   if (err) {
-//     console.error(err);
-//     return res.status(500).send("An error occurred");
-//   }
-//   res.status(200).send("Images inserted successfully");
-// });
+//   const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
+//   const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf("."));
 
-export const getS3URLS = async (req, res) => {
-  console.log("getting s3 urls...");
-  //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12
-  let {
-    imageGroupId,
-    height,
-    width,
-    path,
-    fileExtension,
-    imageFormat,
-  } = req.body;
+//   db.query(
+//     sqlInsertStatement,
+//     [objectKeyWithoutExtension, imageGroupId, height, width],
+//     (err, result) => {
+//       if (err) {
+//         console.error(err);
+//         return res.status(500).send("An error occurred");
+//       }
+//     }
+//   );
 
-  const url = await generateUploadURL(fileExtension, imageFormat); //this will only matter when handling unprocessed images. like eqrt
+//   return res.json({
+//     cwd: null,
+//     file:
+//       {
+//         dateModified: new Date().toISOString(),
+//         dateCreated: new Date().toISOString(),
+//         filterPath: path,
+//         hasChild: false,
+//         isFile: true,
+//         // id: id,
+//         size: 0,
+//         type: "",
+//         url: url,
+//       },
+//     details: null,
+//     error: null,
+//   });
+// };
 
-  let sqlInsertStatement = "INSERT INTO images (s3_key, group_id, height, width) VALUES (?, ?, ?, ?)";
-
-  const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
-  const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf("."));
-
-  db.query(
-    sqlInsertStatement,
-    [objectKeyWithoutExtension, imageGroupId, height, width],
-    (err, result) => {
-      if (err) {
-        console.error(err);
-        return res.status(500).send("An error occurred");
-      }
-    }
-  );
-
-  return res.json({
-    cwd: null,
-    file:
-      {
-        dateModified: new Date().toISOString(),
-        dateCreated: new Date().toISOString(),
-        filterPath: path,
-        hasChild: false,
-        isFile: true,
-        // id: id,
-        size: 0,
-        type: "",
-        url: url,
-      },
-    details: null,
-    error: null,
-  });
-};
 
 //update the images if the images are successfully uploaded to s3
-export const updateImages = async (req, res) => {};

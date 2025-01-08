@@ -15,9 +15,9 @@ import { connectToDatabase, connectToDatabase2 } from "./services/dbService.js";
 
 // Routes
 import fileManagerRoutes from "./routes/fileManagerRoutes.js";
-import folderRoutes from "./routes/folderRoutes.js";
 import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/auth.js";
+import s3Routes from "./routes/s3Routes.js";
 
 
 
@@ -74,8 +74,8 @@ connectToDatabase2();
 
 // Use routes
 app.use("/api/filemanager", fileManagerRoutes);
-app.use("/api/folder", folderRoutes);
-app.use('/auth', authRoutes); // Mount the auth routes
+app.use('/auth', authRoutes); 
+app.use("/api/s3", s3Routes); 
 app.use("/", indexRoutes);
 
 // Server

@@ -57,7 +57,8 @@ self.onmessage = async function (event) {
     async function findFormat(imageRatio) {
         switch (imageRatio) { // width/height
             case 12:
-            self.postMessage({ jobCompleted: "detect_360_Format", format: "stereoCubeMap", imageID});
+                self.postMessage({ jobCompleted: "detect_360_Format", format: "stereo_cubemap", imageID, width: bitmap.width, height: bitmap.height, faceCount: 1, imageFileType, clientImageId});
+                return "cubemap";
                 // self.postMessage({ work: "setFormat", format: "stereoCubeMap", imageID });
                 // let bitmaps = await processStereoCubeMap(bitmap);
                 // if (generateThumbnail) {

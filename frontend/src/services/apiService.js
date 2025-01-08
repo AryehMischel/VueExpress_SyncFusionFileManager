@@ -1,0 +1,66 @@
+import axios from "axios";
+
+const apiBaseUrl = "http://localhost:3000/api";
+
+export const updateImageFormat = async (imageID, format) => {
+  try {
+    const response = await axios.patch(`${apiBaseUrl}/filemanager/image/360-format`, {
+      id: imageID,
+      format: format,
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error updating image format:", error);
+    if (error.response) {
+      console.error("Error response:", error.response);
+      if (error.response.status) {
+        console.error("Error status:", error.response.status);
+      } else {
+        console.error("Error response does not contain status");
+      }
+    } else {
+      console.error("Error does not contain response");
+    }
+    throw error;
+  }
+};
+
+export const getPresignedUrl = async (imageData) => {
+  try {
+    const response = await axios.post(`${apiBaseUrl}/s3/presigned-url`, imageData);
+    return response.data;
+  } catch (error) {
+    console.error("Error getting presigned URL:", error);
+    if (error.response) {
+      console.error("Error response:", error.response);
+      if (error.response.status) {
+        console.error("Error status:", error.response.status);
+      } else {
+        console.error("Error response does not contain status");
+      }
+    } else {
+      console.error("Error does not contain response");
+    }
+    throw error;
+  }
+};
+
+export const uploadFileInfo = async (fileInfo) => {
+  try {
+    const response = await axios.post("http://localhost:3000/api/filemanager/upload", fileInfo);
+    return response.data;
+  } catch (error) {
+    console.error("Error uploading file info:", error);
+    if (error.response) {
+      console.error("Error response:", error.response);
+      if (error.response.status) {
+        console.error("Error status:", error.response.status);
+      } else {
+        console.error("Error response does not contain status");
+      }
+    } else {
+      console.error("Error does not contain response");
+    }
+    throw error;
+  }
+};
