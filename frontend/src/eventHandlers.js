@@ -63,70 +63,43 @@ export const onBeforeSend = async (args, fileManagerRef) => {
       });
 
       // Step 6: Refresh the file manager
-      // Step 6: Refresh the file manager
-
       refreshFileManager();
-      // console.log("fileManagerRef:", fileManagerRef);
-      // if (fileManagerRef.value && typeof fileManagerRef.value.refreshFiles === 'function') {
-      //   fileManagerRef.value.refreshFiles();
-      // } else {
-      //   console.error("FileManager instance not found or refreshFiles method is not available");
-      // }
 
-      //step 2: detect 360 format
-      // const format = await detect360Format(
-      //   file,
-      //   clientImageId,
-      //   fileExtension
-      // );
-      // console.log("format detected: ", format);
-
-      //     // Step 2: Get presigned URL for the file upload
-      //     const presignedUrlData = await getPresignedUrl({
-      //       imageGroupId: response.files[0].id,
-      //       height: file.height,
-      //       width: file.width,
-      //       fileExtension: fileExtension,
-      //       imageFormat: "original",
-      //     });
-
-      //     // Step 3: Upload the file to the presigned URL
-      //     const uploadResponse = await fetch(presignedUrlData.file.url, {
-      //       method: "PUT",
-      //       headers: {
-      //         "Content-Type": file.type,
-      //       },
-      //       body: file,
-      //     });
-
-      //     if (!uploadResponse.ok) {
-      //       throw new Error(`HTTP error! status: ${uploadResponse.status}`);
-      //     }
-
-      //     console.log("File uploaded successfully");
-
-      //     // Step 4: Update the ajaxSettings data
-
-      //   } catch (error) {
-      //     if (error.response && error.response.status === 409) {
-      //       console.log("File already exists");
-      //     } else {
-      //       console.error("Error saving file info:", error);
-      //     }
-      //   }
     }
   }
 };
 
-export const onSuccess = (args, state) => {
+export const onSuccess = async (args, state) => {
   if (args.action === "read") {
+    console.log("read results:", args)
+
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
     } else {
       console.error("Unexpected response structure:", args.result);
     }
+
+    // await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+    // // await getRowGroup();
+    // console.log("Row group:", rowGroup);
+    // for (let i = 0; i < args.result.files.length; i++) {
+    //   if (rowGroup) {
+    //   const div = document.createElement("div");
+    //   div.style.width = "100px";
+    //   div.style.height = "100px";
+    //   div.style.backgroundColor = "blue";
+    //   rowGroup.appendChild(div);
+    //   }
+    // }
+
+
   }
+};
+
+export const onFileOpen = (args) => {
+  console.log("file opened")
+
 };
 
 export const onFailure = (args) => {
@@ -153,12 +126,56 @@ export const onBeforePopupOpen = (args) => {
   }
 };
 
-export const onFileLoad = (args) => {
-  if (args.fileDetails.isFile) {
-    if (args.element.childNodes.length > 5) {
-      args.element.childNodes[5].classList.add("specialCase");
+export const onFileLoad = async (args) => {
+  console.log("File loaded but shouldn't:", args);
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+  await getRowGroup();
+  console.log("Row group:", rowGroup);
+  let element = args.element
+  element.addEventListener("click", (event) => {
+    const targetElement = element.children[0];
+
+    // Create and dispatch mousedown event
+    const mouseDownEvent = new MouseEvent("mousedown", {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(mouseDownEvent);
+
+    // Create and dispatch mouseup event
+    const mouseUpEvent = new MouseEvent("mouseup", {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(mouseUpEvent);
+
+    // Create and dispatch click event
+
+    targetElement.click();
+
+    let targ = getSelectedShit();
+    console.log("targ", targ);
+
+    if (targ === currSelectedItem) {
+      openFile(targ);
+    } else {
+      currSelectedItem = targ;
     }
-  }
+    //   document.body.classList = ""
+
+    //children[i].children[0].dispatchEvent(mouseUpEvent);
+  });
+  rowGroup.appendChild(args.element);
+ 
+  // args.cancel = true;
+  // args = {  };
+  // // if (args.fileDetails.isFile) {
+  // //   if (args.element.childNodes.length > 5) {
+  // //     args.element.childNodes[5].classList.add("specialCase");
+  // //   }
+  // // }
 };
 
 const generateUniqueId = () => {
