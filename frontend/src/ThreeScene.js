@@ -1989,3 +1989,21 @@ let vrMode = false;
 
 window.vrMode = vrMode;
 
+
+let urls = []
+function setBreadCrumb(){
+    let breadCrumb = document.getElementById("file-manager_breadcrumbbar");
+    let urlParent = breadCrumb.querySelector(".e-addressbar-ul");
+    console.log("urlParent", urlParent);
+    for(let i = 0; i < urlParent.children.length; i++){
+        urls[i] = (urlParent.children[i]);
+        urlParent.children[i].addEventListener("click", () => {
+            let clicky = urlParent.children[i].querySelector(".e-list-text")
+            clicky.click();
+        })
+    }
+}
+
+window.links = urls;
+
+window.setBreadCrumb = setBreadCrumb;

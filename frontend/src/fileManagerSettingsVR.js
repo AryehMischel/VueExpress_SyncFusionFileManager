@@ -9,7 +9,7 @@ export const ajaxSettings = {
   };
   
   export const toolbarSettings = {
-    visible: true,
+    visible: false,
     items: [
       "NewFolder",
       "SortBy",

@@ -71,7 +71,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
 
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
-    console.log("read results non VR")
+    console.log("read results VR")
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
@@ -80,10 +80,26 @@ export const onSuccess = async (args, state) => {
       console.error("Unexpected response structure:", args.result);
     }
 
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+    setBreadCrumb()
+    // // await getRowGroup();
+    // console.log("Row group:", rowGroup);
+    // for (let i = 0; i < args.result.files.length; i++) {
+    //   if (rowGroup) {
+    //   const div = document.createElement("div");
+    //   div.style.width = "100px";
+    //   div.style.height = "100px";
+    //   div.style.backgroundColor = "blue";
+    //   rowGroup.appendChild(div);
+    //   }
+    // }
+
+
   }
 };
 
 export const onFileOpen = (args) => {
+  console.log("file opened")
 
 };
 
@@ -112,6 +128,48 @@ export const onBeforePopupOpen = (args) => {
 };
 
 export const onFileLoad = async (args) => {
+  console.log("File loaded but shouldn't:", args);
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for 1 second
+  await getRowGroup();
+  console.log("Row group:", rowGroup);
+  let element = args.element
+  element.addEventListener("click", (event) => {
+    const targetElement = element.children[0];
+
+    // Create and dispatch mousedown event
+    const mouseDownEvent = new MouseEvent("mousedown", {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(mouseDownEvent);
+
+    // Create and dispatch mouseup event
+    const mouseUpEvent = new MouseEvent("mouseup", {
+      view: window,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.body.dispatchEvent(mouseUpEvent);
+
+    // Create and dispatch click event
+
+    targetElement.click();
+
+    let targ = getSelectedShit();
+    console.log("targ", targ);
+
+    if (targ === currSelectedItem) {
+      openFile(targ);
+    } else {
+      currSelectedItem = targ;
+    }
+    //   document.body.classList = ""
+
+    //children[i].children[0].dispatchEvent(mouseUpEvent);
+  });
+  rowGroup.appendChild(args.element);
+ 
   // args.cancel = true;
   // args = {  };
   // // if (args.fileDetails.isFile) {

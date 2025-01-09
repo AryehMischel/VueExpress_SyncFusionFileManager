@@ -12,12 +12,12 @@
       :detailsViewSettings="detailsViewSettings"
       :allowDragAndDrop="true"
       :uploadSettings="uploadSettings"
-      @fileOpen="(args) => onFileOpen(args)"
-      @beforeSend="(args) => onBeforeSend(args, fileManagerRef)"
-      @success="(args) => onSuccess(args, state)"
-      @failure="(args) => onFailure(args)"
-      @beforePopupOpen="(args) => onBeforePopupOpen(args)"
-      @fileLoad="(args) => onFileLoad(args)"
+      @fileOpen="(args) => eventHandlers.onFileOpen(args)"
+      @beforeSend="(args) => eventHandlers.onBeforeSend(args, fileManagerRef)"
+      @success="(args) => eventHandlers.onSuccess(args, state)"
+      @failure="(args) => eventHandlers.onFailure(args)"
+      @beforePopupOpen="(args) => eventHandlers.onBeforePopupOpen(args)"
+      @fileLoad="(args) => eventHandlers.onFileLoad(args)"
     ></ejs-filemanager>
   </div>
 </template>
@@ -31,18 +31,31 @@ import {
   Toolbar,
 } from "@syncfusion/ej2-vue-filemanager";
 import { registerLicense } from "@syncfusion/ej2-base";
-import {
-  onBeforeSend,
-  onBeforePopupOpen,
-  onFileLoad,
-  onSuccess,
-  onFailure,
-  onFileOpen,
-} from "./eventHandlers";
+console.log("user aganet", navigator.userAgent)
+import { isVRDevice } from "./utils/utility.js";
+
+// Use the appropriate event handlers
+import * as VREventHandlers from "./eventHandlersVR";
+import * as nonVREventHandlers from "./eventHandlers";
+
+// Import toolbar settings
+import { toolbarSettings as nonVRToolbarSettings } from "./fileManagerSettings";
+import { toolbarSettings as VRToolbarSettings } from "./fileManagerSettingsVR";
+const toolbarSettings = ref(nonVRToolbarSettings);
+
+const eventHandlers = ref({
+  onBeforeSend: nonVREventHandlers.onBeforeSend,
+  onBeforePopupOpen: nonVREventHandlers.onBeforePopupOpen,
+  onFileLoad: nonVREventHandlers.onFileLoad,
+  onSuccess: nonVREventHandlers.onSuccess,
+  onFailure: nonVREventHandlers.onFailure,
+  onFileOpen: nonVREventHandlers.onFileOpen,
+});
+
 import { createWebWorkers } from "./workers/workerManager";
 import {
   ajaxSettings,
-  toolbarSettings,
+  // toolbarSettings,
   contextMenuSettings,
   view,
   detailsViewSettings,
@@ -61,7 +74,7 @@ const state = reactive({
   currentPath: "/",
 });
 
-onMounted(() => {
+onMounted(async () => {
   createWebWorkers();
   const fileManagerInstance = fileManagerRef.value?.ej2Instances;
   window.fileManagerInstance = fileManagerInstance;
@@ -94,38 +107,26 @@ onMounted(() => {
   } else {
     console.error("FileManager instance not found");
   }
+  if(await isVRDevice()){
+    console.log("VR Device")
 
-  // // Three.js setup
-  // const scene = new THREE.Scene();
-  //   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  //   const renderer = new THREE.WebGLRenderer();
-  //   renderer.setSize(window.innerWidth, window.innerHeight);
-  //   document.getElementById('canvas-container').appendChild(renderer.domElement);
+    //set event handlers for VR
+    eventHandlers.value.onBeforeSend = VREventHandlers.onBeforeSend;
+    eventHandlers.value.onBeforePopupOpen = VREventHandlers.onBeforePopupOpen;
+    eventHandlers.value.onFileLoad = VREventHandlers.onFileLoad;
+    eventHandlers.value.onSuccess = VREventHandlers.onSuccess;
+    eventHandlers.value.onFailure = VREventHandlers.onFailure;
+    eventHandlers.value.onFileOpen = VREventHandlers.onFileOpen;
 
-  //   const geometry = new THREE.BoxGeometry();
-  //   const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-  //   const cube = new THREE.Mesh(geometry, material);
-  //   scene.add(cube);
+    //set toolbar settings for VR
+    toolbarSettings.value = VRToolbarSettings;
 
-  //   camera.position.z = 5;
+    console.log("VR Device");
+  }else{
+    console.log("Not VR Device")
+  }
 
-  //   const animate = function () {
-  //     requestAnimationFrame(animate);
 
-  //     cube.rotation.x += 0.01;
-  //     cube.rotation.y += 0.01;
-
-  //     renderer.render(scene, camera);
-  //   };
-
-  //   animate();
-
-  //   // Handle window resize
-  //   window.addEventListener('resize', () => {
-  //     camera.aspect = window.innerWidth / window.innerHeight;
-  //     camera.updateProjectionMatrix();
-  //     renderer.setSize(window.innerWidth, window.innerHeight);
-  //   });
 });
 </script>
 
