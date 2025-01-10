@@ -125,7 +125,7 @@ export const onBeforePopupOpen = (args) => {
 
 
 export const onFileLoad = async (args) => {
-  await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second
+  await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
 
   await getRowGroup();
   console.log("Row group:", rowGroup);
