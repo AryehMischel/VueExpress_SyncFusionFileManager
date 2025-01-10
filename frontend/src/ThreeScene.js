@@ -9,6 +9,7 @@ import {
   BoxGeometry,
   SphereGeometry,
   CanvasTexture,
+  EquirectangularReflectionMapping,
   PerspectiveCamera,
   HemisphereLight,
   DirectionalLight,
@@ -21,7 +22,9 @@ import {
   DoubleSide,
   LinearFilter,
   TextureLoader,
+  UnsignedByteType,
   CompressedTexture,
+  CompressedCubeTexture,
   LinearMipmapLinearFilter,
 } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -829,47 +832,135 @@ class WebXRQuadUILayer {
   }
 }
 
-class ImageManager {
-    constructor() {
-      if (ImageManager.instance) {
-        return ImageManager.instance;
-      }
-      this.images = {};
-      this.currentImage = null;
-      ImageManager.instance = this;
-    }
-  
-    addImage(name, imageInstance) {
-      this.images[name] = imageInstance;
-    }
-  
-    removeImage(name) {
-      delete this.images[name];
-    }
-  
-    selectImage(name) {
-      if (this.images[name]) {
-        this.currentImage = this.images[name];
-        this.renderImage();
-      } else {
-        console.warn(`Image ${name} not found`);
-      }
-    }
-  
-    renderImage() {
-      if (this.currentImage) {
-        if (isVRDevice()) {
-          this.currentImage.createXRLayer(glBinding, xrSpace);
-        } else {
-          this.currentImage.createThreeTexture();
-          scene.background = this.currentImage.texture;
+class CubeLayer {
+  constructor(faces, width, height, stereo) {
+    this.layer = null;
+    this.texture = null;
+    this.faces = faces;
+    this.stereo = stereo;
+    this.format = 37808; // ASTC format
+    this.width = width;
+    this.height = height;
+    this.type = "CubeLayer";
+    this.loaded = false;
+  }
+
+  // Method to load images asynchronously
+  async loadImages() {
+    const loader = new THREE.CubeTextureLoader();
+    return new Promise((resolve, reject) => {
+      loader.load(
+        this.faces,
+        (texture) => {
+          this.texture = texture;
+          this.loaded = true;
+          resolve();
+        },
+        undefined,
+        (error) => {
+          console.error("Error loading images:", error);
+          reject(error);
         }
+      );
+    });
+  }
+
+  async loadKTX2Files() {}
+
+  async loadAstcFiles() {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const arrayBuffer = await response.arrayBuffer();
+    var rawData = new Uint8Array(arrayBuffer);
+    console.log("rawData: ", rawData);
+    console.log("rawDataLength: ", rawData.Length);
+
+    // Create a DataView starting from byte offset 16
+    const astcData = new DataView(arrayBuffer, 16);
+
+    const width = 1536; // Width of the texture
+    const height = 1536; // Height of the texture
+    const format = 37808; //THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
+
+    // Create a compressed texture
+    const compressedTexture = new CompressedTexture(
+      [{ data: astcData, width, height }], // Mipmaps (can be an array of levels)
+      width,
+      height,
+      format
+    );
+
+    compressedTexture.minFilter = LinearMipmapLinearFilter;
+    compressedTexture.magFilter = LinearFilter;
+    compressedTexture.needsUpdate = true;
+  }
+
+  // Method to create the WebXR layer
+  createXRLayer(glBinding, xrSpace) {
+    this.layer = glBinding.createCubeLayer({
+      space: xrSpace,
+      viewPixelWidth: this.width,
+      viewPixelHeight: this.height,
+      layout: this.stereo ? "stereo" : "mono",
+      colorFormat: this.format,
+      isStatic: false,
+    });
+  }
+
+  // Method to create a Three.js texture
+  createThreeTexture() {
+    // Texture is already created in loadImages
+  }
+
+  // Method to check if the layer is stereo
+  isStereo() {
+    return this.stereo;
+  }
+}
+
+class ImageManager {
+  constructor() {
+    if (ImageManager.instance) {
+      return ImageManager.instance;
+    }
+    this.images = {};
+    this.currentImage = null;
+    ImageManager.instance = this;
+  }
+
+  addImage(name, imageInstance) {
+    this.images[name] = imageInstance;
+  }
+
+  removeImage(name) {
+    delete this.images[name];
+  }
+
+  selectImage(name) {
+    if (this.images[name]) {
+      this.currentImage = this.images[name];
+      this.renderImage();
+    } else {
+      console.warn(`Image ${name} not found`);
+    }
+  }
+
+  renderImage() {
+    if (this.currentImage) {
+      if (isVRDevice()) {
+        this.currentImage.createXRLayer(glBinding, xrSpace);
+      } else {
+        this.currentImage.createThreeTexture();
+        scene.background = this.currentImage.texture;
       }
     }
   }
-  
-  const imageManager = new ImageManager();
-  export default imageManager;
+}
+
+const imageManager = new ImageManager();
+export default imageManager;
 
 // VR UI
 
@@ -938,15 +1029,15 @@ window.links = urls;
 
 window.setBreadCrumb = setBreadCrumb;
 
+//     name: "Test_ASTC_Layer",
+//     url: "./textures/ASTC/Forest/testpx.astc",
+//     type: "quad",
+//     height: 1536,
+//     width: 1536,
 
-
-  //     name: "Test_ASTC_Layer",
-  //     url: "./textures/ASTC/Forest/testpx.astc",
-  //     type: "quad",
-  //     height: 1536,
-  //     width: 1536,
-
-async function loadInCompressedTexture(url ="https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/px.astc") {
+async function loadInCompressedTexture(
+  url = "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/px.astc"
+) {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -961,7 +1052,7 @@ async function loadInCompressedTexture(url ="https://d1w8hynvb3moja.cloudfront.n
 
   const width = 1536; // Width of the texture
   const height = 1536; // Height of the texture
-  const format = 37808//THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
+  const format = 37808; //THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
 
   // Create a compressed texture
   const compressedTexture = new CompressedTexture(
@@ -976,15 +1067,180 @@ async function loadInCompressedTexture(url ="https://d1w8hynvb3moja.cloudfront.n
   compressedTexture.needsUpdate = true;
 
   // Use the texture in a material
-  const material = new MeshStandardMaterial({
-    map: compressedTexture,
-  });
+  //   const material = new MeshStandardMaterial({
+  //     map: compressedTexture,
+  //   });
 
-  // Apply material to a mesh
-  const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
-  mesh.position.set(0, 0, -5);
-  scene.add(mesh);
+  //   // Apply material to a mesh
+  //   const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
+  //   mesh.position.set(0, 0, -5);
+  //   scene.add(mesh);
 }
 
-window.loadInCompressedTexture = loadInCompressedTexture;
+// async function loadInCompressedCubeMap(compressedDataUrls){
+//     const response = await fetch(url);
+//   if (!response.ok) {
+//     throw new Error(`HTTP error! status: ${response.status}`);
+//   }
+//   const arrayBuffer = await response.arrayBuffer();
+//   var rawData = new Uint8Array(arrayBuffer);
+// //   console.log("rawData: ", rawData);
+// //   console.log("rawDataLength: ", rawData.Length);
 
+//   // Create a DataView starting from byte offset 16
+//   const astcData = new DataView(arrayBuffer, 16);
+
+//   const width = 1536; // Width of the texture
+//   const height = 1536; // Height of the texture
+//   const format = 37808//THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
+
+//   // Create a compressed texture
+//   const compressedTexture = new CompressedTexture(
+//     [{ data: astcData, width, height }], // Mipmaps (can be an array of levels)
+//     width,
+//     height,
+//     format
+//   );
+
+//   compressedTexture.minFilter = LinearMipmapLinearFilter;
+//   compressedTexture.magFilter = LinearFilter;
+//   compressedTexture.needsUpdate = true;
+
+// }
+
+// async function loadInCompressedCubeMap(urls = compressedDataUrls) {
+//   const promises = urls.map(async (url) => {
+//     const response = await fetch(url);
+//     if (!response.ok) {
+//       throw new Error(`HTTP error! status: ${response.status}`);
+//     }
+//     const arrayBuffer = await response.arrayBuffer();
+//     const rawData = new Uint8Array(arrayBuffer);
+//     const astcData = new DataView(arrayBuffer, 16); // Skip the ASTC header
+
+//     return {
+//       data: astcData,
+//       width: 1536, // Replace with the actual width of your ASTC texture
+//       height: 1536, // Replace with the actual height of your ASTC texture
+//     };
+//   });
+
+//   const facesData = await Promise.all(promises);
+
+//   const compressedTexture = new THREE.CompressedTexture(
+//     facesData,
+//     facesData[0].width,
+//     facesData[0].height,
+//     37808, // Replace with the actual ASTC format
+//   );
+
+//   compressedTexture.needsUpdate = true;
+
+//   return compressedTexture;
+// }
+
+// loadInCompressedCubeMap(urls).then((texture) => {
+//   // Use the texture
+//   console.log('CompressedCubeTexture loaded:', texture);
+// });
+
+let compressedDataUrls = [
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/px.astc",
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/nx.astc",
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/py.astc",
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/ny.astc",
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/pz.astc",
+  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/nz.astc",
+];
+async function loadInCompressedCubeMap(urls) {
+    console.log('URLs passed to loadInCompressedCubeMap:', urls);
+  
+    if (!urls || !Array.isArray(urls)) {
+      throw new Error('Invalid URLs array');
+    }
+  
+    try {
+      const promises = urls.map(async (url) => {
+        console.log('Fetching URL:', url);
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const rawData = new Uint8Array(arrayBuffer);
+        console.log("rawData: ", rawData);
+        console.log("rawDataLength: ", rawData.length);
+  
+        // Create a DataView starting from byte offset 16
+        const astcData = new Uint8Array(arrayBuffer, 16); // Skip the ASTC header
+  
+        const width = 1536; // Width of the texture
+        const height = 1536; // Height of the texture
+        const format = 37808;//RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
+  
+        return {
+          data: astcData,
+          width,
+          height,
+          format
+        };
+      });
+  
+      const facesData = await Promise.all(promises);
+  
+      console.log('Faces data:', facesData);
+  
+      const compressedTexture = new CompressedCubeTexture(
+        facesData.map(face => ({
+          mipmaps: [{ data: face.data, width: face.width, height: face.height }],
+          width: face.width,
+          height: face.height,
+          format: face.format
+        })),
+        37808,
+        UnsignedByteType
+      );
+  
+    //   compressedTexture.minFilter = LinearMipmapLinearFilter;
+    //   compressedTexture.magFilter = LinearFilter;
+    //   compressedTexture.generateMipmaps = true;
+      compressedTexture.needsUpdate = true;
+  
+      return compressedTexture;
+    } catch (error) {
+      console.error('Error loading compressed cube map:', error);
+      throw error;
+    }
+  }
+  
+  loadInCompressedCubeMap(compressedDataUrls).then((texture) => {
+    // Use the texture
+    console.log('CompressedCubeTexture loaded:', texture);
+    scene.background = texture;
+  }).catch(error => {
+    console.error('Error loading compressed cube map:', error);
+  });
+  
+  window.loadInCompressedCubeMap = loadInCompressedCubeMap;
+
+
+
+  //load in eqrt jpeg
+
+    async function loadInEquirectangularImage(url = "https://d1w8hynvb3moja.cloudfront.net/Desert360_6k.jpg") {
+        let loader = new TextureLoader();
+    loader.load(
+        url,
+        (texture) => {
+            texture.mapping = EquirectangularReflectionMapping;
+            scene.background = texture;
+        },
+        undefined,
+        (error) => {
+            console.error('An error occurred while loading the texture:', error);
+        }
+    );
+    }
+
+window.loadInEquirectangularImage = loadInEquirectangularImage;
+// loadInEquirectangularImage();
