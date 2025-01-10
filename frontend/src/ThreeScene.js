@@ -85,17 +85,6 @@ renderer.xr.addEventListener("sessionend", () => onSessionEnd());
 document.body.appendChild(VRButton.createButton(renderer));
 
 
-// if (navigator.xr) {
-//     navigator.xr.requestSession('inline').then((session) => {
-//       renderer.xr.setSession(session); // Attach the session to the renderer
-//       console.log("Inline session started");
-//     }).catch((err) => {
-//       console.error("Failed to start inline session:", err);
-//     });
-//   } else {
-//     console.warn("WebXR not supported");
-//   }
-
 //add pc controls ('awsd' to move, mouse to look around)
 controls = customControls(camera, renderer);
 
@@ -171,40 +160,7 @@ let offset2 = 0;
 
 for (let i = 0; i < astcSources.length; i++) {
   createCompressedTextureLayerASTC(astcSources[i]);
-  //   const response = await fetch(astcSources[i].url);
-  //   if (!response.ok) {
-  //     throw new Error(`HTTP error! status: ${response.status}`);
-  //   }
-  //   const arrayBuffer = await response.arrayBuffer();
-  //   var rawData = new Uint8Array(arrayBuffer);
-  //   console.log("rawData: ", rawData);
-  //   console.log("rawDataLength: ", rawData.Length);
-  // // Create a DataView starting from byte offset 16
-  // const dataView = new DataView(arrayBuffer, 16);
-  //   let quadLayer = new WebXRQuadLayer(
-  //     rawData,
-  //     37808,
-  //     astcSources[i].height,
-  //     astcSources[i].width
-  //   );
-  //   layers[astcSources[i].name] = quadLayer;
-  //   createButton(
-  //     astcSources[i].name + " setup layer",
-  //     () => {
-  //       createLayer(astcSources[i].name);
-  //     },
-  //     0.8,
-  //     offset2
-  //   );
-  //   createButton(
-  //     astcSources[i].name + " add layer",
-  //     () => {
-  //       setLayer(astcSources[i].name);
-  //     },
-  //     0.2,
-  //     offset2
-  //   );
-  //   offset2 += 0.2;
+
 }
 
 async function createCompressedTextureLayerASTC(image) {
@@ -493,14 +449,7 @@ function createEquirectangularLayer(image_data = eqrtSources[0]) {
 
 window.createEquirectangularLayerASTC = createEquirectangularLayerASTC;
 window.createEquirectangularLayer = createEquirectangularLayer;
-// createButton(
-//   "spawn eqrt layer",
-//   () => {
-//     createEquirectangularLayer();
-//   },
-//   0.2,
-//   -0.4
-// );
+
 
 //The compressed textures will be used to renderer 360 images on threejs meshe's outside the xr session
 //The data in the compressed textures will be used for rendering our webxr layers (during xr sessions)

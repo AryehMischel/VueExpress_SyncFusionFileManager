@@ -71,7 +71,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
 
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
-    console.log("read results non VR")
+    console.log("read results non VR:", args.result);
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
