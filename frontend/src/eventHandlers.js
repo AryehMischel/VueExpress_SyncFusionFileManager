@@ -112,6 +112,13 @@ export const onBeforePopupOpen = (args) => {
 };
 
 export const onFileLoad = async (args) => {
+  // console.log("File loaded:", args);
+  if(args.fileDetails.isFile) {
+    args.element.addEventListener("click", () => {
+      console.log("select image: ", args.fileDetails.name);
+    });
+  }
+
   // args.cancel = true;
   // args = {  };
   // // if (args.fileDetails.isFile) {
