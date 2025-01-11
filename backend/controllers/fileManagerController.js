@@ -3,10 +3,21 @@ import {
   createFolder,
   deleteItemsFromDatabase,
 } from "../services/fileManagerService.js";
-import { uploadFile, updateImageFormat } from "../services/fileManagerService.js";
+import { uploadFile, updateImageFormat, getUserImages } from "../services/fileManagerService.js";
 
 
-
+export const getImagesTest = async (req, res) => {
+  console.log("getImagesTest controller");
+  const userId = 1;
+  const groupId = null;
+  try{
+  const result = await getUserImages(userId, groupId, res);
+  res.status(200).json(result);
+  }catch(error){
+    console.error("Error in getImagesTest controller:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
 export const handleFileManagerActions = (req, res) => {
   const userId = req.user.userId;
   const { action, path, filterPath, name } = req.body;

@@ -1,4 +1,5 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
+import { imageManager } from "./ThreeScene.js";
 import { processImage, addImage } from "./workers/workerManager.js";
 
 export const onBeforeSend = async (args, fileManagerRef) => {
@@ -73,6 +74,18 @@ export const onSuccess = async (args, state) => {
   if (args.action === "read") {
     console.log("read results non VR:", args.result);
 
+    for(let i = 0; i < args.result.files.length; i++) {
+      const file = args.result.files[i];
+      if(file.isFile) {
+        console.log("File loaded:", file);
+        if(file.processed){
+          imageManager.createImageObjects(file);
+        } else{
+          //grey out unprocessed images
+        }
+      }
+    }
+
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
@@ -112,10 +125,11 @@ export const onBeforePopupOpen = (args) => {
 };
 
 export const onFileLoad = async (args) => {
-  // console.log("File loaded:", args);
   if(args.fileDetails.isFile) {
+      console.log("File loaded:", args);
+
     args.element.addEventListener("click", () => {
-      console.log("select image: ", args.fileDetails.name);
+      imageManager.selectImage(`${args.fileDetails.groupId}`);
     });
   }
 

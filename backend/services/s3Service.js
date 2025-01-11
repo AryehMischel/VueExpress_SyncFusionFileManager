@@ -106,12 +106,12 @@ export const getS3URL = async (req) => {
   let sqlInsertStatement = "INSERT INTO images (s3_key, group_id, height, width) VALUES (?, ?, ?, ?)";
 
   const objectKey = url.split("?")[0].split("/").pop(); //url.split("/").pop() + "." + req.body.extension;
-  const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf("."));
+  // const objectKeyWithoutExtension = objectKey.substring(0, objectKey.lastIndexOf("."));
 
   return new Promise((resolve, reject) => {
     db.query(
       sqlInsertStatement,
-      [objectKeyWithoutExtension, imageGroupId, height, width],
+      [objectKey, imageGroupId, height, width],
       (err, result) => {
         if (err) {
           console.error(err);

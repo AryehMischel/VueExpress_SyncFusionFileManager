@@ -2,7 +2,7 @@ import express from "express";
 const router = express.Router();
 
 //controllers
-import { handleFileManagerActions } from "../controllers/fileManagerController.js";
+import { handleFileManagerActions, getImagesTest } from "../controllers/fileManagerController.js";
 import {handleUploadFile, handleUpdateImageFormat} from "../controllers/fileManagerController.js";
 
 //middleware
@@ -14,6 +14,7 @@ import { checkDuplicateFileMiddleware, actionMiddleware } from "../middleware/fi
 router.post("/upload", ensureAuthenticated, checkDuplicateFileMiddleware, handleUploadFile); 
 router.post("/actions", ensureAuthenticated, actionMiddleware, handleFileManagerActions); //Create, Update, Delete, Rename, Move, Copy, etc
 router.patch("/image/360-format", ensureAuthenticated, handleUpdateImageFormat);
+router.get("/images", ensureAuthenticated, getImagesTest);
 
 
 

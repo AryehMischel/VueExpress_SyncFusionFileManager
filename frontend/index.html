@@ -31,7 +31,7 @@
 </script>  
 </head>
   <body>
-    <div id="app"></div>
+    <div id="app" style="position: absolute;"></div>
     <script type="module" src="/src/main.js"></script>
     <script type="module" src="/src/ThreeScene.js"></script>
 
@@ -47,6 +47,7 @@
     const snapThreshold = 10; // pixels from edge to trigger snap
 
     panel.draggable({
+
       handle: "#file-manager_toolbar",
       containment: "window", // Keep panel within window bounds
       start: function () {
@@ -97,4 +98,6 @@
         // }
       },
     });
+
+
 </script>

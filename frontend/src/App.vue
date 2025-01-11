@@ -133,12 +133,13 @@ onMounted(async () => {
 <style src="./App.css"></style>
 
 <style>
-/* #app {
-  /* position: relative;
+/* 
+#app {
+  position: relative;
   width: 100%;
-  height: 100%; */
-/* overflow: hidden; */
-/* } */
+  height: 100%;
+  overflow: hidden;
+}
 
 #canvas-container {
   position: absolute;
@@ -149,7 +150,7 @@ onMounted(async () => {
   z-index: 0;
 }
 
-/* #file-manager {
+#file-manager {
   position: absolute;
   top: 10px;
   left: 10px;
@@ -162,6 +163,6 @@ onMounted(async () => {
     255,
     0.9
   ); /* Optional: Add a background to make it more readable */
+/*}*/
 
-/*} */
 </style>

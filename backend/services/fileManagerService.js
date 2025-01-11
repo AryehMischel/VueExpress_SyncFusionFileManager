@@ -8,7 +8,7 @@ export const getActiveFilesAndFolders = async (
   res
 ) => {
   if (path === "/") {
-    const sqlFiles = `SELECT * FROM image_groups WHERE folder_id IS NULL and user_id = ${userId}`;
+    const sqlFiles = `CALL GetImageGroupsWithFaces(${null}, ${userId})`;
     const sqlFolders = `SELECT * FROM folders WHERE parent_id IS NULL and user_id = ${userId}`;
 
     db.query(sqlFiles, (err, fileResults) => {
@@ -23,7 +23,11 @@ export const getActiveFilesAndFolders = async (
           return res.status(500).send("An error occurred");
         }
 
-        const files = fileResults.map((file) => ({
+
+        const filesArray = fileResults[0]; // Access the first element of fileResults
+        console.log("filesArray", filesArray);
+
+        const files = filesArray.map((file) => ({
           name: file.name,
           size: 0,
           dateModified: new Date().toISOString(),
@@ -32,6 +36,11 @@ export const getActiveFilesAndFolders = async (
           format_360: file.image_format,
           hasChild: false,
           filterPath: "/",
+          processed: file.processed,
+          faces: file.images,
+          groupId: file.group_id,
+          width: file.width,
+          height: file.height,
           processed: file.processed,
         }));
 
@@ -68,10 +77,8 @@ export const getActiveFilesAndFolders = async (
       return res.status(500).send("An error occurred");
     }
 
-    const sqlFiles =
-      "SELECT * FROM image_groups WHERE folder_id = ? and user_id = ?";
-    const sqlFolders =
-      "SELECT * FROM folders WHERE parent_id = ? and user_id = ?"; //we could also make folder id's unique if we wanted to simplify this query
+    const sqlFiles = `CALL GetImageGroupsWithFaces(${folderId}, ${userId})`;
+    const sqlFolders = "SELECT * FROM folders WHERE parent_id = ? and user_id = ?"; //we could also make folder id's unique if we wanted to simplify this query
 
     db.query(sqlFiles, [folderId, userId], (err, fileResults) => {
       if (err) {
@@ -85,7 +92,11 @@ export const getActiveFilesAndFolders = async (
           return res.status(500).send("An error occurred");
         }
 
-        const files = fileResults.map((file) => ({
+        const filesArray = fileResults[0]; // Access the first element of fileResults
+        console.log("filesArray", filesArray);
+
+
+        const files = filesArray.map((file) => ({
           name: file.name,
           size: 0,
           dateModified: new Date().toISOString(),
@@ -95,6 +106,11 @@ export const getActiveFilesAndFolders = async (
           filterPath: filterPath,
           id: file.id,
           format_360: file.image_format,
+          faces: file.images,
+          groupId: file.group_id,
+          width: file.width,
+          height: file.height,
+          processed: file.processed,
         }));
 
         const folders = folderResults.map((folder) => ({
@@ -510,6 +526,17 @@ export const updateImageFormat = async (format, id, userId) => {
         message: "Image group updated successfully",
       });
     });
+  });
+};
+
+export const getUserImages = async (userId, groupId ) => {
+  const sqlFiles = `CALL GetImageGroupsWithFaces(${groupId}, ${userId})`;
+  db.query(sqlFiles, (err, fileResults) => {
+    if (err) {
+      console.error("Error querying files:", err);
+      return res.status(500).send("An error occurred");
+    }
+    console.log("fileResults", fileResults);
   });
 };
 
