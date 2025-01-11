@@ -1,12 +1,19 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
 import { processImage, addImage } from "./workers/workerManager.js";
 
+import Logger from './utils/logger.js';
+
+
+const eventHandlersVRLogger = new Logger('VR_Events', true);
+
+
+
 export const onBeforeSend = async (args, fileManagerRef) => {
   if (args.action === "Upload") {
     const fileInput = document.querySelector("#file-manager_upload");
-    console.log("File input element:", fileInput);
+    eventHandlersVRLogger.log("File input element:", fileInput);
     const file = fileInput.files[0];
-    console.log("File:", file);
+    eventHandlersVRLogger.log("File:", file);
     args.cancel = true; // Prevent the default upload behavior
 
     const data = JSON.parse(args.ajaxSettings.data);
@@ -24,7 +31,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
         fileExtension: fileExtension,
       });
 
-      console.log("Uploading file:", filename, "to path:", path);
+      eventHandlersVRLogger.log("Uploading file:", filename, "to path:", path);
       try {
         // Step 1: Save file info to the server
         const response = await uploadFileInfo({
@@ -35,19 +42,19 @@ export const onBeforeSend = async (args, fileManagerRef) => {
           dateCreated: new Date().toISOString(),
         });
         //sanitize and validate input
-        console.log(file, response.files[0].id, clientImageId);
+        eventHandlersVRLogger.log(file, response.files[0].id, clientImageId);
         try {
           processImage(file, response.files[0].id, clientImageId);
         } catch (err) {
-          console.log("Error processing image:", err);
+          eventHandlersVRLogger.log("Error processing image:", err);
         }
 
         //sanitize and validate input
         // processImage(file, response.data.files[0].id, clientImageId);
       } catch (error) {
-        console.log("Error saving file info:", error);
+        eventHandlersVRLogger.log("Error saving file info:", error);
         if (error.response && error.response.status === 409) {
-          console.log("File already exists");
+          eventHandlersVRLogger.log("File already exists");
         } else {
         }
       }
@@ -70,19 +77,19 @@ export const onBeforeSend = async (args, fileManagerRef) => {
 
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
-    console.log("read results VR");
+    eventHandlersVRLogger.log("read results VR");
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
     } else {
-      console.error("Unexpected response structure:", args.result);
+      eventHandlersVRLogger.error("Unexpected response structure:", args.result);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second
     setBreadCrumb();
     // // await getRowGroup();
-    // console.log("Row group:", rowGroup);
+    // eventHandlersVRLogger.log("Row group:", rowGroup);
     // for (let i = 0; i < args.result.files.length; i++) {
     //   if (rowGroup) {
     //   const div = document.createElement("div");
@@ -96,24 +103,24 @@ export const onSuccess = async (args, state) => {
 };
 
 export const onFileOpen = (args) => {
-  console.log("file opened");
+  eventHandlersVRLogger.log("file opened");
 };
 
 export const onFailure = (args) => {
-  console.error("Failure:", args);
+  eventHandlersVRLogger.error("Failure:", args);
   if (args.error) {
     if (args.error.response) {
-      console.error("Error response:", args.error.response);
+      eventHandlersVRLogger.error("Error response:", args.error.response);
       if (args.error.response.status) {
-        console.error("Error status:", args.error.response.status);
+        eventHandlersVRLogger.error("Error status:", args.error.response.status);
       } else {
-        console.error("Error response does not contain status");
+        eventHandlersVRLogger.error("Error response does not contain status");
       }
     } else {
-      console.error("Error does not contain response");
+      eventHandlersVRLogger.error("Error does not contain response");
     }
   } else {
-    console.error("Unexpected error structure:", args);
+    eventHandlersVRLogger.error("Unexpected error structure:", args);
   }
 };
 
@@ -128,7 +135,7 @@ export const onFileLoad = async (args) => {
   await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
 
   await getRowGroup();
-  console.log("Row group:", rowGroup);
+  eventHandlersVRLogger.log("Row group:", rowGroup);
   let element = args.element;
 
   rowGroup.appendChild(args.element);
@@ -136,7 +143,7 @@ export const onFileLoad = async (args) => {
   if (args.fileDetails.isFile) {
       const targetElement = element.children[0];
       targetElement.addEventListener("click", (event) => {
-        console.log("selected image: ", args.fileDetails.name);
+        eventHandlersVRLogger.log("selected image: ", args.fileDetails.name);
       })
 
 
@@ -162,7 +169,7 @@ export const onFileLoad = async (args) => {
       targetElement.click();
 
       let targ = getSelectedShit();
-      // console.log("targ", targ);
+      // eventHandlersVRLogger.log("targ", targ);
 
       // if (targ === currSelectedItem) {
       //   openFile(targ);
@@ -194,7 +201,7 @@ export const onFileLoad = async (args) => {
       targetElement.click();
 
       let targ = getSelectedShit();
-      console.log("targ", targ);
+      eventHandlersVRLogger.log("targ", targ);
 
       if (targ === currSelectedItem) {
         openFile(targ);

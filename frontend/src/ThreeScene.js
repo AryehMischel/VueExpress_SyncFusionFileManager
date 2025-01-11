@@ -28,14 +28,16 @@ import {
   CubeTextureLoader,
   LinearMipmapLinearFilter,
 } from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { VRButton } from "three/addons/webxr/VRButton.js";
-import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-import { HTMLMesh } from "three/addons/interactive/HTMLMesh.js";
-import { InteractiveGroup } from "three/addons/interactive/InteractiveGroup.js";
-import { XRControllerModelFactory } from "three/addons/webxr/XRControllerModelFactory.js";
-import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
-import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import Stats from 'three/examples/jsm/libs/stats.module.js'
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
+import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
+import { HTMLMesh } from "three/examples/jsm/interactive/HTMLMesh.js";
+import { InteractiveGroup } from "three/examples/jsm/interactive/InteractiveGroup.js";
+import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
+import { XRHandModelFactory } from "three/examples/jsm/webxr/XRHandModelFactory.js";
+import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
+import Logger from './utils/logger';
 import ThreeMeshUI from "https://cdn.skypack.dev/three-mesh-ui";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 let scene,
@@ -58,15 +60,23 @@ let rowGroup;
 let currSelectedItem = null;
 window.currSelectedItem = currSelectedItem;
 
+
+
 try {
   let layersPolyfill = new WebXRLayersPolyfill();
 } catch {
   if ("xr" in navigator) {
     //weird. your device supports webxr but not the polyfill.
   } else {
-    console.log("WebXR is not supported on this device.");
+    logger.log("WebXR is not supported on this device.");
   }
 }
+
+
+//utils
+let logger = new Logger("ThreeScene", true);
+const stats = new Stats()
+document.body.appendChild(stats.dom)
 
 // to store WebXR Layers
 let layers = new Object();
@@ -121,19 +131,20 @@ let ASTC_EXT = gl.getExtension("WEBGL_compressed_texture_astc");
 let ETC_EXT = gl.getExtension("WEBGL_compressed_texture_etc");
 
 if (ASTC_EXT) {
-  console.log("ASTC_EXT", ASTC_EXT);
+  logger.log("ASTC_EXT", ASTC_EXT);
 } else {
-  console.log("no astc");
+  logger.log("no astc");
 }
 if (ETC_EXT) {
-  console.log("ETC_EXT", ETC_EXT);
+  logger.log("ETC_EXT", ETC_EXT);
 } else {
-  console.log("no etc");
+  logger.log("no etc");
 }
 
 //animation loop
 function animate(t, frame) {
   const xr = renderer.xr;
+  stats.update();
   const session = xr.getSession();
   xrSession = session;
   if (
@@ -141,7 +152,7 @@ function animate(t, frame) {
     session.renderState.layers !== undefined &&
     session.hasMediaLayer === undefined
   ) {
-    console.log("creating media layer");
+    logger.log("creating media layer");
     session.hasMediaLayer = true;
     session.requestReferenceSpace("local-floor").then((refSpace) => {
       glBinding = xr.getBinding();
@@ -149,10 +160,7 @@ function animate(t, frame) {
     });
   }
 
-  //this good, since we are using mostly static layers,
-  // maybe an improvement would be grouping for the  active static Layers which need to be redrawn
-  // (we still call it redrawing even if it's technically the first time we are drawing to the webxr layer)
-  // in order to avoid checking static layers each frame.
+//check active layers for redraw  
   for (let i = 0; i < activeLayers.length; i++) {
     if (activeLayers[i].layer.needsRedraw) {
       drawWebXRLayer(activeLayers[i], session, frame);
@@ -195,7 +203,7 @@ function drawWebXREquirectangularLayer(layer, session, frame) {
   gl.bindTexture(gl.TEXTURE_2D, null);
 
   if (layer.stereo) {
-    console.log("add stereo support");
+    logger.log("add stereo support");
   }
 }
 
@@ -221,18 +229,18 @@ function drawCompressedWebXREquirectangularLayer(layer, frame) {
   gl.bindTexture(gl.TEXTURE_2D, null);
 
   if (layer.stereo) {
-    console.log("add stereo support");
+    logger.log("add stereo support");
   }
 }
 
 //currently only handles compressed textures
 function drawWebXRCubeLayer(layer, session, frame) {
   let format = eval(layer.format);
-  console.log("format is?", format);
+  logger.log("format is?", format);
   let width = layer.width;
 
   if (!layer.stereo) {
-    console.log("drawing cube layer");
+    logger.log("drawing cube layer");
     let glayer = glBinding.getSubImage(layer.layer, frame);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, glayer.colorTexture);
@@ -439,7 +447,7 @@ function drawWebXRQuadLayer(layer, session, frame) {
   let format = eval(layer.format);
   let width = layer.width;
   let height = layer.height;
-  console.log("drawing quad layer", height, width);
+  logger.log("drawing quad layer", height, width);
 
   let glayer = glBinding.getSubImage(layer.layer, frame);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -477,7 +485,7 @@ function drawWebXRQuadUILayer(layer, session, frame) {
 window.addEventListener("resize", onWindowResize, false);
 
 function onWindowResize() {
-  console.log("resize");
+  logger.log("resize");
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
 
@@ -485,7 +493,7 @@ function onWindowResize() {
   if (!renderer.xr.isPresenting) {
     renderer.setSize(window.innerWidth, window.innerHeight);
   } else {
-    console.warn("Cannot change size while VR device is presenting");
+    logger.warn("Cannot change size while VR device is presenting");
   }
 }
 function createLayer(imagename) {
@@ -501,7 +509,7 @@ function destroyLayer(imagename) {
 function setLayer(layerID, isUIlayer = false) {
   let layerLength = xrSession.renderState.layers.length;
   activeLayers.push(layers[layerID]);
-  console.log("layer length", layerLength);
+  logger.log("layer length", layerLength);
   xrSession.updateRenderState({
     layers: [
       layers[layerID].layer,
@@ -511,12 +519,12 @@ function setLayer(layerID, isUIlayer = false) {
 }
 
 function onSessionEnd() {
-  console.log("session ended");
+  logger.log("session ended");
   //remove layers?
 }
 
 function onSessionStart() {
-  console.log("session started");
+  logger.log("session started");
   // createQuadIU()
 }
 
@@ -533,7 +541,7 @@ function customControls(camera, renderer) {
   controls.maxPolarAngle = Math.PI;
   controls.minPolarAngle = 0;
 
-  console.log("camera roptation", camera.rotation)
+  logger.log("camera roptation", camera.rotation)
 
   controls.keys = {
     LEFT: "KeyA", // Use 'A' key to rotate left
@@ -566,7 +574,6 @@ function setupScene(scene) {
 }
 
 function customRenderer() {
-  console.log("creating renderer from function ");
   let renderer = new WebGLRenderer({ antialias: false });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -626,7 +633,7 @@ class WebXRCubeLayerASTC {
   constructor(faces, width, height, stereo) {
     this.layer = null;
     this.faces = faces;
-    console.log("faces lenght", faces.length);
+    logger.log("faces lenght", faces.length);
     this.stereo = stereo;
     this.format = 37808;
     this.width = width;
@@ -672,8 +679,8 @@ class WebXRCubeLayer {
   // Method to create the WebXR layer
   createLayer(texture = this.Cube_Texture) {
     // Logic to create the WebXR layer using this.active_Cube_Texture
-    console.log("Creating WebXR layer with texture:", eval(this.format));
-    console.log("height, widht", this.width, this.height);
+    logger.log("Creating WebXR layer with texture:", eval(this.format));
+    logger.log("height, widht", this.width, this.height);
 
     this.layer = glBinding.createCubeLayer({
       space: xrSpace,
@@ -688,7 +695,7 @@ class WebXRCubeLayer {
   // Method to render the WebXR layer
   renderLayer() {
     // Logic to render the WebXR layer
-    console.log("Rendering WebXR layer");
+    logger.log("Rendering WebXR layer");
     // Example: someRenderFunction(this.cubeLayer);
   }
 
@@ -708,7 +715,7 @@ class WebXREquirectangularLayer {
     this.radius = radius;
     this.stereo = stereo;
     this.type = "WebXREquirectangularLayer";
-    console.log("is stereo? ", this.stereo);
+    logger.log("is stereo? ", this.stereo);
   }
 
   // Method to create the WebXR layer
@@ -733,7 +740,7 @@ class WebXREquirectangularLayer {
   // Method to render the WebXR layer
   renderLayer() {
     // Logic to render the WebXR layer
-    console.log("Rendering WebXR layer");
+    logger.log("Rendering WebXR layer");
     // Example: someRenderFunction(this.cubeLayer);
   }
 
@@ -752,9 +759,9 @@ class WebXRQuadLayer {
     this.stereo = stereo;
     this.height = height;
     this.width = width;
-    //  console.log("viewPixelWidth, viewPixelHeight", texture.mipmaps[0].width, texture.mipmaps[0].height);
-    //  console.log("Creating WebXR layer with texture:", texture.mipmaps[0].width, texture.mipmaps[0].height);
-    console.log("format", this.format);
+    //  logger.log("viewPixelWidth, viewPixelHeight", texture.mipmaps[0].width, texture.mipmaps[0].height);
+    //  logger.log("Creating WebXR layer with texture:", texture.mipmaps[0].width, texture.mipmaps[0].height);
+    logger.log("format", this.format);
 
     // this.stereo = stereo;
     // this.radius = radius;
@@ -763,9 +770,9 @@ class WebXRQuadLayer {
 
   // Method to create the WebXR layer
   createLayer(texture = this.texture) {
-    //console.log("Creating quad with format:", this.format);
+    //logger.log("Creating quad with format:", this.format);
 
-    console.log("Creating quad", this.width, this.height, this.format);
+    logger.log("Creating quad", this.width, this.height, this.format);
 
     this.layer = glBinding.createQuadLayer({
       space: xrSpace,
@@ -803,7 +810,7 @@ class WebXRQuadUILayer {
     this.depth = depth;
     this.stereo = stereo;
     this.positionX = positionX;
-    console.log("positionX", positionX);
+    logger.log("positionX", positionX);
     this.positionY = positionY;
 
     // this.Equirectangular_Texture = Equirectangular_Texture;
@@ -841,7 +848,7 @@ class WebXRQuadUILayer {
 }
 
 class CubeLayer {
-  constructor(faces, width, height, stereo) {
+  constructor(faces, width, height, stereo, id) {
     this.layer = null;
     this.texture = null;
     this.faces = faces;
@@ -851,6 +858,7 @@ class CubeLayer {
     this.height = height;
     this.type = "CubeLayer";
     this.loaded = false;
+    this.id = id;
     // this.initializeTexture();
   }
 
@@ -883,20 +891,23 @@ class CubeLayer {
 
   // }
   async loadAllImages() {
+    logger.log("loading textures for cube layer: ", this.id);
     let firstSixUrls = this.faces.slice(0, 6);
     await this.createCubeTexture(firstSixUrls);
+    logger.log("finished loading textures for cube layer: ", this.id);
     this.loaded = true;
     firstSixUrls = null;
   }
 
   createCubeTexture(urls) {
     return new Promise((resolve, reject) => {
-      console.log("creating cubemap texture");
+      logger.log("creating cubemap texture");
       let loader = new CubeTextureLoader();
       loader.setPath( cdnPath + "/" );
       loader.load(urls, (texture) => {
         this.texture = texture;
         this.texture.needsUpdate = true;
+        renderer.initTexture(this.texture);
         resolve();
       }, undefined, (error) => {
         reject(error);
@@ -914,8 +925,8 @@ class CubeLayer {
     // }
     // const arrayBuffer = await response.arrayBuffer();
     // var rawData = new Uint8Array(arrayBuffer);
-    // console.log("rawData: ", rawData);
-    // console.log("rawDataLength: ", rawData.Length);
+    // logger.log("rawData: ", rawData);
+    // logger.log("rawDataLength: ", rawData.Length);
 
     // // Create a DataView starting from byte offset 16
     // const astcData = new DataView(arrayBuffer, 16);
@@ -961,7 +972,7 @@ class CubeLayer {
 }
 
 class EquirectangularImage{
-  constructor(srcArray, width, height, stereo) {
+  constructor(srcArray, width, height, stereo, id) {
     this.type = "Equirectangular";
     this.layer = null;
     this.srcArray = srcArray; // Three.js equirectangular texture
@@ -972,6 +983,7 @@ class EquirectangularImage{
     this.height = height;
     this.texture = null;
     this.loaded = false;
+    this.id = id;
     // this.initializeTexture();
   }
 
@@ -988,7 +1000,7 @@ class EquirectangularImage{
   // }
   
   // createEquirectangularTexture(url){
-  //   console.log("creating equirectangular texture");
+  //   logger.log("creating equirectangular texture");
   //   let loader = new TextureLoader();
   //   loader.load(url, (texture) => {
   //     this.texture = texture;
@@ -998,16 +1010,18 @@ class EquirectangularImage{
   // }
 
   // async loadAllImages() {
-  //    console.log("loading eqrt image from queue")
+  //    logger.log("loading eqrt image from queue")
   //   await Promise.all(this.srcArray.map(url => this.createEquirectangularTexture(url)));
   //   this.loaded = true;
   // }
 
   async loadAllImages() {
-    console.log("loading first equirectangular image from queue");
+    logger.log("loading texture for eqrt layer: ", this.id);
     if (this.srcArray.length > 0) {
       await this.createEquirectangularTexture(this.srcArray);
       this.loaded = true;
+      logger.log("finsished loading texture for eqrt layer: ", this.id);
+
     }
   }
 
@@ -1019,6 +1033,7 @@ class EquirectangularImage{
         this.texture = texture;
         this.texture.mapping = EquirectangularReflectionMapping;
         this.texture.needsUpdate = true;
+        renderer.initTexture(this.texture);
         resolve();
       }, undefined, reject);
     });
@@ -1031,8 +1046,6 @@ class EquirectangularImage{
 
 
 }
-
-
 
 class StateManager {
   constructor() {
@@ -1097,7 +1110,7 @@ class ImageManager {
       this.currentImage = this.images[name];
       imageDisplayManager.displayImage(this.currentImage);
     } else {
-      console.warn(`Image ${name} not found`);
+      logger.warn(`Image ${name} not found`);
     }
   }
 
@@ -1105,15 +1118,15 @@ class ImageManager {
   async createImageObjects(imageData){
 
     if(imageData.groupId in this.images){
-      console.log("image already exists");
+      logger.log("image already exists");
       return;
     }
-    // console.log("creating image objects");
+    // logger.log("creating image objects");
     if (imageData.format_360 === 'equirectangular') {
 
       let imageArr = JSON.parse(imageData.faces);
       let url = `${cdnPath}/${imageArr[0]}`;
-      let equirectangularImage = new EquirectangularImage(url, imageData.width, imageData.height, false);
+      let equirectangularImage = new EquirectangularImage(url, imageData.width, imageData.height, false, imageData.groupId);
       this.addImage(imageData.groupId, equirectangularImage);
 
     
@@ -1122,7 +1135,7 @@ class ImageManager {
     }else if(imageData.format_360 === 'stereo_equirectangular'){
       let imageArr = JSON.parse(imageData.faces);
       let url = `${cdnPath}/${imageArr[0]}`;
-      let equirectangularImage = new EquirectangularImage(url, imageData.width, imageData.height, true);
+      let equirectangularImage = new EquirectangularImage(url, imageData.width, imageData.height, true, imageData.groupId);
       this.addImage(imageData.groupId, equirectangularImage);
 
     
@@ -1130,14 +1143,14 @@ class ImageManager {
     
     
       let faces = JSON.parse(imageData.faces);
-      let cubeLayer = new CubeLayer(faces, imageData.width, imageData.height, false);
+      let cubeLayer = new CubeLayer(faces, imageData.width, imageData.height, false, imageData.groupId);
       this.addImage(imageData.groupId, cubeLayer);
     
     
     
     }else if(imageData.format_360 === 'stereo_cubemap'){
       let faces = JSON.parse(imageData.faces);
-      let cubeLayer = new CubeLayer(faces, imageData.width, imageData.height, true);
+      let cubeLayer = new CubeLayer(faces, imageData.width, imageData.height, true, imageData.groupId);
       this.addImage(imageData.groupId, cubeLayer);
 
     }
@@ -1152,7 +1165,7 @@ class ImageDisplayManager {
   }
 
   displayImage(image) {
-    console.log("displaying image");
+    logger.log("displaying image");
     if (stateManager.isVR) {
       image.createXRLayer(glBinding, xrSpace);
     } else {
@@ -1169,7 +1182,7 @@ class DownloadManager {
   }
 
   addToQueue(imageInstance) {
-    console.log(imageInstance, "added to queue");
+    logger.log(imageInstance, "added to queue");
     this.queue.push(imageInstance);
     this.processQueue();
   }
@@ -1183,6 +1196,7 @@ class DownloadManager {
 
   processQueue() {
     while (this.activeDownloads < this.maxConcurrentDownloads && this.queue.length > 0) {
+      logger.log("processing next item in queue");
       const imageInstance = this.queue.shift();
       this.activeDownloads++;
       imageInstance.loadAllImages().then(() => {
@@ -1255,19 +1269,19 @@ async function getRowGroup() {
     const gridContent = fileManagerGrid.querySelector(".e-gridcontent");
     if (gridContent) {
       const rowGroups = gridContent.querySelectorAll('[role="rowgroup"]');
-      console.log("rowgroups: ", rowGroups.length);
+      logger.log("rowgroups: ", rowGroups.length);
       if (rowGroups.length === 1) {
         rowGroup = rowGroups[0];
         window.rowGroup = rowGroup;
-        console.log("rowGroup: ", rowGroup);
+        logger.log("rowGroup: ", rowGroup);
       }
     } else {
-      console.error(
+      logger.error(
         'Element with classes "e-gridcontent e-lib e-touch" not found under file-manager_grid'
       );
     }
   } else {
-    console.error('Element with id "file-manager_grid" not found');
+    logger.error('Element with id "file-manager_grid" not found');
   }
 }
 
@@ -1288,7 +1302,7 @@ let urls = [];
 function setBreadCrumb() {
   let breadCrumb = document.getElementById("file-manager_breadcrumbbar");
   let urlParent = breadCrumb.querySelector(".e-addressbar-ul");
-  console.log("urlParent", urlParent);
+  logger.log("urlParent", urlParent);
   for (let i = 0; i < urlParent.children.length; i++) {
     urls[i] = urlParent.children[i];
     urlParent.children[i].addEventListener("click", () => {
@@ -1317,8 +1331,8 @@ async function loadInCompressedTexture(
   }
   const arrayBuffer = await response.arrayBuffer();
   var rawData = new Uint8Array(arrayBuffer);
-  console.log("rawData: ", rawData);
-  console.log("rawDataLength: ", rawData.Length);
+  logger.log("rawData: ", rawData);
+  logger.log("rawDataLength: ", rawData.Length);
 
   // Create a DataView starting from byte offset 16
   const astcData = new DataView(arrayBuffer, 16);
@@ -1360,7 +1374,7 @@ let compressedDataUrls = [
   "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/nz.astc",
 ];
 async function loadInCompressedCubeMap(urls) {
-    console.log('URLs passed to loadInCompressedCubeMap:', urls);
+    logger.log('URLs passed to loadInCompressedCubeMap:', urls);
   
     if (!urls || !Array.isArray(urls)) {
       throw new Error('Invalid URLs array');
@@ -1368,15 +1382,15 @@ async function loadInCompressedCubeMap(urls) {
   
     try {
       const promises = urls.map(async (url) => {
-        console.log('Fetching URL:', url);
+        logger.log('Fetching URL:', url);
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const arrayBuffer = await response.arrayBuffer();
         const rawData = new Uint8Array(arrayBuffer);
-        console.log("rawData: ", rawData);
-        console.log("rawDataLength: ", rawData.length);
+        logger.log("rawData: ", rawData);
+        logger.log("rawDataLength: ", rawData.length);
   
         // Create a DataView starting from byte offset 16
         const astcData = new Uint8Array(arrayBuffer, 16); // Skip the ASTC header
@@ -1395,7 +1409,7 @@ async function loadInCompressedCubeMap(urls) {
   
       const facesData = await Promise.all(promises);
   
-      console.log('Faces data:', facesData);
+      logger.log('Faces data:', facesData);
   
       const compressedTexture = new CompressedCubeTexture(
         facesData.map(face => ({
@@ -1415,18 +1429,19 @@ async function loadInCompressedCubeMap(urls) {
   
       return compressedTexture;
     } catch (error) {
-      console.error('Error loading compressed cube map:', error);
+      logger.error('Error loading compressed cube map:', error);
       throw error;
     }
   }
   
   // loadInCompressedCubeMap(compressedDataUrls).then((texture) => {
   //   // Use the texture
-  //   console.log('CompressedCubeTexture loaded:', texture);
+  //   logger.log('CompressedCubeTexture loaded:', texture);
   //   scene.background = texture;
   // }).catch(error => {
-  //   console.error('Error loading compressed cube map:', error);
+  //   logger.error('Error loading compressed cube map:', error);
   // });
   
   window.loadInCompressedCubeMap = loadInCompressedCubeMap;
+
 

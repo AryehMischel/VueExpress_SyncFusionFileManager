@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import App from './App.vue';
-import store from './store';
+import pinia from './store';
 import './style.css';
 // Import jQuery and jQuery UI
 import $ from 'jquery';
@@ -10,5 +10,5 @@ import 'jquery-ui/ui/widgets/draggable';
 window.$ = $;
 window.jQuery = $;
 createApp(App)
-  .use(store)
+  .use(pinia)
   .mount('#app');

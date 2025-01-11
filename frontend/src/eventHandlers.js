@@ -1,13 +1,38 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
-import { imageManager } from "./ThreeScene.js";
+import { imageManager, StateManager } from "./ThreeScene.js";
 import { processImage, addImage } from "./workers/workerManager.js";
+import Logger from "./utils/logger.js";
+
+const eventLogger = new Logger("eventHandlers", true);
 
 export const onBeforeSend = async (args, fileManagerRef) => {
+  if (args.action === "read") {
+    eventLogger.log("requesting images from server...", args);
+    // Example: Modify the request data
+    if (args.ajaxSettings.data) {
+
+      if(ThreeStateManager){
+        if(ThreeStateManager.isVR){
+          const requestData = JSON.parse(args.ajaxSettings.data);
+          requestData.customField = "CustomValue";
+          args.ajaxSettings.data = JSON.stringify(requestData);
+        }else{
+          console.log("not VR");
+        }
+      }else{
+        console.log("no stateManager");
+      } 
+
+    }
+    // args.ajaxSettings.data = JSON.stringify({"message from frontend": "any message really"});
+    // eventLogger.log("requesting images from server...");
+  }
+
   if (args.action === "Upload") {
     const fileInput = document.querySelector("#file-manager_upload");
-    console.log("File input element:", fileInput);
+    eventLogger.log("File input element:", fileInput);
     const file = fileInput.files[0];
-    console.log("File:", file);
+    eventLogger.log("File:", file);
     args.cancel = true; // Prevent the default upload behavior
 
     const data = JSON.parse(args.ajaxSettings.data);
@@ -25,7 +50,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
         fileExtension: fileExtension,
       });
 
-      console.log("Uploading file:", filename, "to path:", path);
+      eventLogger.log("Uploading file:", filename, "to path:", path);
       try {
         // Step 1: Save file info to the server
         const response = await uploadFileInfo({
@@ -36,19 +61,19 @@ export const onBeforeSend = async (args, fileManagerRef) => {
           dateCreated: new Date().toISOString(),
         });
         //sanitize and validate input
-        console.log(file, response.files[0].id, clientImageId);
+        eventLogger.log(file, response.files[0].id, clientImageId);
         try {
           processImage(file, response.files[0].id, clientImageId);
         } catch (err) {
-          console.log("Error processing image:", err);
+          eventLogger.log("Error processing image:", err);
         }
 
         //sanitize and validate input
         // processImage(file, response.data.files[0].id, clientImageId);
       } catch (error) {
-        console.log("Error saving file info:", error);
+        eventLogger.log("Error saving file info:", error);
         if (error.response && error.response.status === 409) {
-          console.log("File already exists");
+          eventLogger.log("File already exists");
         } else {
         }
       }
@@ -65,22 +90,21 @@ export const onBeforeSend = async (args, fileManagerRef) => {
 
       // Step 6: Refresh the file manager
       refreshFileManager();
-
     }
   }
 };
 
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
-    console.log("read results non VR:", args.result);
+    eventLogger.log("read results non VR:", args.result);
 
-    for(let i = 0; i < args.result.files.length; i++) {
+    for (let i = 0; i < args.result.files.length; i++) {
       const file = args.result.files[i];
-      if(file.isFile) {
-        console.log("File loaded:", file);
-        if(file.processed){
+      if (file.isFile) {
+        eventLogger.log("File loaded:", file);
+        if (file.processed) {
           imageManager.createImageObjects(file);
-        } else{
+        } else {
           //grey out unprocessed images
         }
       }
@@ -90,31 +114,28 @@ export const onSuccess = async (args, state) => {
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
     } else {
-      console.error("Unexpected response structure:", args.result);
+      eventLogger.error("Unexpected response structure:", args.result);
     }
-
   }
 };
 
-export const onFileOpen = (args) => {
-
-};
+export const onFileOpen = (args) => {};
 
 export const onFailure = (args) => {
-  console.error("Failure:", args);
+  eventLogger.error("Failure:", args);
   if (args.error) {
     if (args.error.response) {
-      console.error("Error response:", args.error.response);
+      eventLogger.error("Error response:", args.error.response);
       if (args.error.response.status) {
-        console.error("Error status:", args.error.response.status);
+        eventLogger.error("Error status:", args.error.response.status);
       } else {
-        console.error("Error response does not contain status");
+        eventLogger.error("Error response does not contain status");
       }
     } else {
-      console.error("Error does not contain response");
+      eventLogger.error("Error does not contain response");
     }
   } else {
-    console.error("Unexpected error structure:", args);
+    eventLogger.error("Unexpected error structure:", args);
   }
 };
 
@@ -125,8 +146,8 @@ export const onBeforePopupOpen = (args) => {
 };
 
 export const onFileLoad = async (args) => {
-  if(args.fileDetails.isFile) {
-      console.log("File loaded:", args);
+  if (args.fileDetails.isFile) {
+    eventLogger.log("File loaded:", args);
 
     args.element.addEventListener("click", () => {
       imageManager.selectImage(`${args.fileDetails.groupId}`);

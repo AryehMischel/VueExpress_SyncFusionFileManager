@@ -20,9 +20,9 @@ import {
     LinearFilter,
     TextureLoader,
   } from "three";
-  import { VRButton } from "three/addons/webxr/VRButton.js";
-  import { XRControllerModelFactory } from "three/addons/webxr/XRControllerModelFactory.js";
-  import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
+  import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
+  import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
+  import { XRHandModelFactory } from "three/examples/jsm/webxr/XRHandModelFactory.js";
   
   let scene, camera, renderer, cube;
   let VRControllers;

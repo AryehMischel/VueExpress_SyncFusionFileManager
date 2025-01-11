@@ -1,18 +1,22 @@
 import { updateImageFormat, getPresignedUrl } from "../services/apiService.js";
+import Logger from '../utils/logger.js';
 
 const workerCount = 4;
 const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
 const images = {};
 
+// Create different loggers for different file groups
+const workerManagerLogger = new Logger('workerManager', true);
+
 export const createWebWorkers = () => {
-    console.log("Creating web workers...");
+    workerManagerLogger.log("Creating web workers...");
   for (let i = 0; i < workerCount; i++) {
     const worker = new Worker(new URL("./worker.js", import.meta.url));
     worker.onmessage = async function (e) {
       // Handle the worker response
       if (e.data.jobCompleted === "detect_360_Format") {
-         console.log("format detected: ", e.data);
+         workerManagerLogger.log("format detected: ", e.data);
         await handleFormatDetection(e);
  
       } else if (e.data.jobCompleted === "processed_cube_faces") {
@@ -53,14 +57,14 @@ const handleFormatDetection = async (e) => {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
 
-    console.log("File uploaded successfully");
+    workerManagerLogger.log("File uploaded successfully");
   } catch (error) {
-    console.error("Error handling format detection:", error);
+    workerManagerLogger.error("Error handling format detection:", error);
   }
 };
 
 const processCubeFaces = (e) => {
-  console.log("process cube faces");
+  workerManagerLogger.log("process cube faces");
 };
 
 export const processImage = async (file, id, clientImageId) => {
@@ -68,7 +72,6 @@ export const processImage = async (file, id, clientImageId) => {
   if (availableWorkerIndex !== -1) {
     workerStatus[availableWorkerIndex] = true; // Mark the worker as busy
     workers[availableWorkerIndex].postMessage({ file, id, clientImageId });
-    console
   } else {
     // add file to work queue
   }

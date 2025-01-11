@@ -1,4 +1,4 @@
-export async function isVRDevice() {
+export default async function isVRDevice() {
     // Check if navigator.xr is enabled
     if (navigator.xr) {
       // Check if the user agent contains known VR headset names

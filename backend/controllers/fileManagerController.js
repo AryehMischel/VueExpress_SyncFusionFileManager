@@ -24,6 +24,7 @@ export const handleFileManagerActions = (req, res) => {
 
   switch (action) {
     case "read":
+      console.log("read request", req.body)
       // GET CURRENT DIRECTORY ID
       getActiveFilesAndFolders(userId, path, filterPath, res);
       break;
