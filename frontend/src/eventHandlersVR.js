@@ -1,19 +1,20 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
 import { processImage, addImage } from "./workers/workerManager.js";
-
+import { getMainStore } from "./store/main";
 import Logger from './utils/logger.js';
 
 
-const eventHandlersVRLogger = new Logger('VR_Events', true);
+const logger = new Logger('VR_Events', true);
 
-
+const store = getMainStore();
 
 export const onBeforeSend = async (args, fileManagerRef) => {
+  console.log("onBeforeSend VR");
   if (args.action === "Upload") {
     const fileInput = document.querySelector("#file-manager_upload");
-    eventHandlersVRLogger.log("File input element:", fileInput);
+    logger.log("File input element:", fileInput);
     const file = fileInput.files[0];
-    eventHandlersVRLogger.log("File:", file);
+    logger.log("File:", file);
     args.cancel = true; // Prevent the default upload behavior
 
     const data = JSON.parse(args.ajaxSettings.data);
@@ -31,7 +32,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
         fileExtension: fileExtension,
       });
 
-      eventHandlersVRLogger.log("Uploading file:", filename, "to path:", path);
+      logger.log("Uploading file:", filename, "to path:", path);
       try {
         // Step 1: Save file info to the server
         const response = await uploadFileInfo({
@@ -42,19 +43,19 @@ export const onBeforeSend = async (args, fileManagerRef) => {
           dateCreated: new Date().toISOString(),
         });
         //sanitize and validate input
-        eventHandlersVRLogger.log(file, response.files[0].id, clientImageId);
+        logger.log(file, response.files[0].id, clientImageId);
         try {
           processImage(file, response.files[0].id, clientImageId);
         } catch (err) {
-          eventHandlersVRLogger.log("Error processing image:", err);
+          logger.log("Error processing image:", err);
         }
 
         //sanitize and validate input
         // processImage(file, response.data.files[0].id, clientImageId);
       } catch (error) {
-        eventHandlersVRLogger.log("Error saving file info:", error);
+        logger.log("Error saving file info:", error);
         if (error.response && error.response.status === 409) {
-          eventHandlersVRLogger.log("File already exists");
+          logger.log("File already exists");
         } else {
         }
       }
@@ -73,23 +74,46 @@ export const onBeforeSend = async (args, fileManagerRef) => {
       refreshFileManager();
     }
   }
+
+  if (args.action === "read") {
+    // Example: Modify the request data
+    if (args.ajaxSettings.data) {
+          const requestData = JSON.parse(args.ajaxSettings.data);
+          requestData.requestedFormat = "astc_4x4";
+          args.ajaxSettings.data = JSON.stringify(requestData);
+    }
+    // args.ajaxSettings.data = JSON.stringify({"message from frontend": "any message really"});
+    // eventLogger.log("requesting images from server...");
+  }
 };
 
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
-    eventHandlersVRLogger.log("read results VR");
+    logger.log("read results VR");
+
+    for (let i = 0; i < args.result.files.length; i++) {
+      const file = args.result.files[i];
+      if (file.isFile) {
+        logger.log("File loaded:", file);
+        if (file.processed) {
+          imageManager.createImageObjects(file);
+        } else {
+          //grey out unprocessed images
+        }
+      }
+    }
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
     } else {
-      eventHandlersVRLogger.error("Unexpected response structure:", args.result);
+      logger.error("Unexpected response structure:", args.result);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second
+    await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
     setBreadCrumb();
     // // await getRowGroup();
-    // eventHandlersVRLogger.log("Row group:", rowGroup);
+    // logger.log("Row group:", rowGroup);
     // for (let i = 0; i < args.result.files.length; i++) {
     //   if (rowGroup) {
     //   const div = document.createElement("div");
@@ -103,24 +127,24 @@ export const onSuccess = async (args, state) => {
 };
 
 export const onFileOpen = (args) => {
-  eventHandlersVRLogger.log("file opened");
+  logger.log("file opened");
 };
 
 export const onFailure = (args) => {
-  eventHandlersVRLogger.error("Failure:", args);
+  logger.error("Failure:", args);
   if (args.error) {
     if (args.error.response) {
-      eventHandlersVRLogger.error("Error response:", args.error.response);
+      logger.error("Error response:", args.error.response);
       if (args.error.response.status) {
-        eventHandlersVRLogger.error("Error status:", args.error.response.status);
+        logger.error("Error status:", args.error.response.status);
       } else {
-        eventHandlersVRLogger.error("Error response does not contain status");
+        logger.error("Error response does not contain status");
       }
     } else {
-      eventHandlersVRLogger.error("Error does not contain response");
+      logger.error("Error does not contain response");
     }
   } else {
-    eventHandlersVRLogger.error("Unexpected error structure:", args);
+    logger.error("Unexpected error structure:", args);
   }
 };
 
@@ -135,19 +159,19 @@ export const onFileLoad = async (args) => {
   await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
 
   await getRowGroup();
-  eventHandlersVRLogger.log("Row group:", rowGroup);
+  logger.log("Row group:", rowGroup);
   let element = args.element;
 
   rowGroup.appendChild(args.element);
 
   if (args.fileDetails.isFile) {
-      const targetElement = element.children[0];
-      targetElement.addEventListener("click", (event) => {
-        eventHandlersVRLogger.log("selected image: ", args.fileDetails.name);
-      })
+      //html ui element
+      const targetElement = element.children[0]; 
 
 
       element.addEventListener("click", (event) => {
+
+      imageManager.selectImage(`${args.fileDetails.groupId}`);
 
       // Create and dispatch mousedown event
       const mouseDownEvent = new MouseEvent("mousedown", {
@@ -155,6 +179,7 @@ export const onFileLoad = async (args) => {
         bubbles: true,
         cancelable: true,
       });
+
       document.body.dispatchEvent(mouseDownEvent);
 
       // Create and dispatch mouseup event
@@ -167,17 +192,9 @@ export const onFileLoad = async (args) => {
 
       // Create and dispatch click event
       targetElement.click();
-
-      let targ = getSelectedShit();
-      // eventHandlersVRLogger.log("targ", targ);
-
-      // if (targ === currSelectedItem) {
-      //   openFile(targ);
-      // } else {
-      currSelectedItem = targ;
-      // }
     });
-  } else {
+  } else { //folders
+    
     element.addEventListener("click", (event) => {
       const targetElement = element.children[0];
 
@@ -200,13 +217,13 @@ export const onFileLoad = async (args) => {
       // Create and dispatch click event
       targetElement.click();
 
-      let targ = getSelectedShit();
-      eventHandlersVRLogger.log("targ", targ);
+      let selectedUI = getSelectedUI();
+      logger.log("selectedUI", selectedUI);
 
-      if (targ === currSelectedItem) {
-        openFile(targ);
+      if (selectedUI === store.previouslySelectedItem) {
+        openFile(selectedUI);
       } else {
-        currSelectedItem = targ;
+        store.previouslySelectedItem = selectedUI;
       }
     });
   }

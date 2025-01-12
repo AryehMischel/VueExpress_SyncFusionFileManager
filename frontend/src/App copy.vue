@@ -83,12 +83,15 @@ onMounted(async () => {
   const fileManagerInstance = fileManagerRef.value?.ej2Instances;
   window.fileManagerInstance = fileManagerInstance;
   if (fileManagerInstance) {
+    
     window.refreshFileManager = () => {
       fileManagerInstance.refreshFiles();
     };
+
     window.refreshLayout = () => {
       fileManagerInstance.refreshLayout();
     };
+
     window.getSelectedShit = () => {
       let selectedObj = fileManagerInstance.getSelectedFiles();
       if (selectedObj && selectedObj.length > 0 && selectedObj[0]) {

@@ -10,20 +10,10 @@ export const onBeforeSend = async (args, fileManagerRef) => {
     eventLogger.log("requesting images from server...", args);
     // Example: Modify the request data
     if (args.ajaxSettings.data) {
-
-      if(ThreeStateManager){
-        if(ThreeStateManager.isVR){
-          const requestData = JSON.parse(args.ajaxSettings.data);
-          requestData.customField = "CustomValue";
-          args.ajaxSettings.data = JSON.stringify(requestData);
-        }else{
-          console.log("not VR");
-        }
-      }else{
-        console.log("no stateManager");
-      } 
-
-    }
+      const requestData = JSON.parse(args.ajaxSettings.data);
+      requestData.requestedFormat = "img";
+      args.ajaxSettings.data = JSON.stringify(requestData);
+}
     // args.ajaxSettings.data = JSON.stringify({"message from frontend": "any message really"});
     // eventLogger.log("requesting images from server...");
   }

@@ -5,10 +5,21 @@ export const getActiveFilesAndFolders = async (
   userId,
   path,
   filterPath,
+  textureFormat,
   res
 ) => {
+
+
+
+
   if (path === "/") {
-    const sqlFiles = `CALL GetImageGroupsWithFaces(${null}, ${userId})`;
+
+    let sqlFiles;
+    if(textureFormat === "astc_4x4") {
+       sqlFiles = `CALL GetImageGroupsWithASTC(${null}, ${userId})`;
+    }else{
+      sqlFiles = `CALL GetImageGroupsWithFaces(${null}, ${userId})`;
+    }
     const sqlFolders = `SELECT * FROM folders WHERE parent_id IS NULL and user_id = ${userId}`;
 
     db.query(sqlFiles, (err, fileResults) => {
@@ -25,7 +36,7 @@ export const getActiveFilesAndFolders = async (
 
 
         const filesArray = fileResults[0]; // Access the first element of fileResults
-        console.log("filesArray", filesArray);
+        // console.log("filesArray", filesArray);
 
         const files = filesArray.map((file) => ({
           name: file.name,
@@ -34,6 +45,7 @@ export const getActiveFilesAndFolders = async (
           type: "file",
           isFile: true,
           format_360: file.image_format,
+          textureFormat: textureFormat,
           hasChild: false,
           filterPath: "/",
           processed: file.processed,
@@ -77,7 +89,12 @@ export const getActiveFilesAndFolders = async (
       return res.status(500).send("An error occurred");
     }
 
-    const sqlFiles = `CALL GetImageGroupsWithFaces(${folderId}, ${userId})`;
+    let sqlFiles;
+    if(textureFormat === "astc_4x4") {
+      sqlFiles = `CALL GetImageGroupsWithASTC(${folderId}, ${userId})`;
+    }else{
+      sqlFiles = `CALL GetImageGroupsWithFaces(${folderId}, ${userId})`;
+    }
     const sqlFolders = "SELECT * FROM folders WHERE parent_id = ? and user_id = ?"; //we could also make folder id's unique if we wanted to simplify this query
 
     db.query(sqlFiles, [folderId, userId], (err, fileResults) => {
@@ -105,6 +122,7 @@ export const getActiveFilesAndFolders = async (
           hasChild: false,
           filterPath: filterPath,
           id: file.id,
+          textureFormat: textureFormat,
           format_360: file.image_format,
           faces: file.images,
           groupId: file.group_id,

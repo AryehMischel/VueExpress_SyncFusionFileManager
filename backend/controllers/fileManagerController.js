@@ -24,9 +24,12 @@ export const handleFileManagerActions = (req, res) => {
 
   switch (action) {
     case "read":
-      console.log("read request", req.body)
+
+      // if(req.body.requestedFormat){
+      //   console.log("requested format:", );
+      // }
       // GET CURRENT DIRECTORY ID
-      getActiveFilesAndFolders(userId, path, filterPath, res);
+      getActiveFilesAndFolders(userId, path, filterPath, req.body.requestedFormat, res);
       break;
     case "create":
       createFolder(req.body.name, req.body.path, req.user.userId, res);
