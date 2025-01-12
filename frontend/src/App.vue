@@ -18,6 +18,7 @@
         @failure="(args) => eventHandlers.onFailure(args)"
         @beforePopupOpen="(args) => eventHandlers.onBeforePopupOpen(args)"
         @fileLoad="(args) => eventHandlers.onFileLoad(args)"
+        @created="(args) => eventHandlers.onCreated(args)"
       ></ejs-filemanager>
     </div>
     <div v-else>
@@ -55,7 +56,6 @@ import {
 
 
 const fileManagerRef = ref(null);
-const store = getMainStore();
 const isInitialized = ref(false);
 
 const state = reactive({
@@ -69,6 +69,8 @@ const state = reactive({
 });
 
 provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
+let store;
+
 // const eventHandlers = ref({
 //   onBeforeSend: ()=>{console.log('onBeforeSend')},
 //   onBeforePopupOpen: ()=>{console.log('onBeforePopupOpen')},
@@ -80,7 +82,7 @@ provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
 
 
 const initializeApp = async () => {
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  // await new Promise(resolve => setTimeout(resolve, 2000));
   state.ajaxSettings = ajaxSettings;
   state.contextMenuSettings = contextMenuSettings;
   state.breadcrumbBarSettings = breadcrumbBarSettings;
@@ -91,6 +93,7 @@ const initializeApp = async () => {
 };
 
 onMounted(async () => {
+  store = getMainStore();
   await initializeApp();
   initializeScene();
   createWebWorkers();
@@ -104,7 +107,6 @@ onMounted(async () => {
     window.refreshLayout = () => {
       fileManagerInstance.refreshLayout();
     };
-
     window.getSelectedUI = () => {
       let selectedObj = fileManagerInstance.getSelectedFiles();
       if (selectedObj && selectedObj.length > 0 && selectedObj[0]) {

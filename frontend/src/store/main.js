@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import isVRDevice from '../utils/vrUtils.js'; // Ensure this path is correct
+import { get } from 'jquery';
 
 
 let storeInstance;
@@ -10,6 +11,8 @@ export const useMainStore = defineStore('main', {
     userAgent: navigator.userAgent,
     supportsASTC: false,
     supportsETC: false,
+    isImmersiveSession: false,
+    currentWorkingDirectory: "",
     // Add other global state properties here
   }),
   actions: {
@@ -22,13 +25,27 @@ export const useMainStore = defineStore('main', {
         const check = isVRDevice();
         this.setVRMode(check); // Use the action to set the state
     },
+    setASTC() {
+      this.supportsASTC = true;
+    },
+    setETC() {
+      this.supportsETC = true;
+    },
+    setImmersiveSession(isSessionBool) {
+      this.isImmersiveSession = isSessionBool;
+    },
+    setWorkingDirectory(path) {
+      this.currentWorkingDirectory = path;
+    },
     // Add other actions here
   },
   getters: {
     getIsVR: (state) => state.isVR,
     userAgent: (state) => state.userAgent,
-    supportsASTC: (state) => state.supportsASTC,
-    supportsETC: (state) => state.supportsETC,
+    getSupportsASTC: (state) => state.supportsASTC,
+    getSupportsETC: (state) => state.supportsETC,
+    getImmersiveSession: (state) => state.isImmersiveSession,
+    getWorkingDirectory: (state) => state.currentWorkingDirectory,
     // Add other getters here
   }
 });

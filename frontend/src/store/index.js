@@ -1,7 +1,7 @@
 import { createPinia } from 'pinia';
-import { useMainStore } from './main.js';
+import { getMainStore } from './main.js';
 
 const pinia = createPinia();
 
-export { useMainStore };
+export { getMainStore };
 export default pinia;

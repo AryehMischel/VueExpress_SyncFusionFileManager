@@ -5,8 +5,12 @@ import Logger from './utils/logger.js';
 
 
 const logger = new Logger('VR_Events', true);
+let store;
 
-const store = getMainStore();
+export const onCreated = async (args) => {
+  store = getMainStore();
+  logger.log("on create for non VR", store.isVR);
+}
 
 export const onBeforeSend = async (args, fileManagerRef) => {
   console.log("onBeforeSend VR");
@@ -104,6 +108,9 @@ export const onSuccess = async (args, state) => {
     }
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
+      
+      logger.log("current path", args.result.cwd.name);
+      store.setWorkingDirectory(args.result.cwd.name);
       state.currentPath = args.result.cwd.name;
       window.currentPath = state.currentPath;
     } else {
@@ -112,17 +119,7 @@ export const onSuccess = async (args, state) => {
 
     await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
     setBreadCrumb();
-    // // await getRowGroup();
-    // logger.log("Row group:", rowGroup);
-    // for (let i = 0; i < args.result.files.length; i++) {
-    //   if (rowGroup) {
-    //   const div = document.createElement("div");
-    //   div.style.width = "100px";
-    //   div.style.height = "100px";
-    //   div.style.backgroundColor = "blue";
-    //   rowGroup.appendChild(div);
-    //   }
-    // }
+
   }
 };
 

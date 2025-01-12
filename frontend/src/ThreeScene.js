@@ -40,7 +40,8 @@ import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import Logger from "./utils/logger";
 import ThreeMeshUI from "https://cdn.skypack.dev/three-mesh-ui";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
-import { getMainStore } from './store/main';
+import { getMainStore } from "./store/main";
+import { log } from "three/src/nodes/TSL.js";
 
 let scene,
   camera,
@@ -64,7 +65,7 @@ window.currSelectedItem = currSelectedItem;
 
 //utils
 let logger = new Logger("ThreeScene", true);
-const store = getMainStore();
+let store;
 
 try {
   let layersPolyfill = new WebXRLayersPolyfill();
@@ -76,6 +77,18 @@ try {
   }
 }
 
+function initializeScene() {
+  store = getMainStore();
+  let vr = store.getIsVR;
+  console.log("is vr?", vr);
+  if (ASTC_EXT) {
+    store.setASTC();
+  }
+  if (ETC_EXT) {
+    store.setETC();
+  }
+}
+window.initializeScene = initializeScene;
 
 const stats = new Stats();
 document.body.appendChild(stats.dom);
@@ -83,8 +96,6 @@ document.body.appendChild(stats.dom);
 // to store WebXR Layers
 let layers = new Object();
 let activeLayers = [];
-
-
 
 window.initializeScene = initializeScene;
 
@@ -103,8 +114,13 @@ document.body.appendChild(renderer.domElement);
 renderer.setAnimationLoop(animate);
 
 //add event listeners for the start and end of the xr session
-renderer.xr.addEventListener("sessionstart", () => onSessionStart());
-renderer.xr.addEventListener("sessionend", () => onSessionEnd());
+renderer.xr.addEventListener("sessionstart", async () => {
+  store.setImmersiveSession(true);
+  addFileManagerVR();
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  imageManager.processLayerQueue();
+})
+renderer.xr.addEventListener("sessionend", () => store.setImmersiveSession(false));
 
 //add vr button
 document.body.appendChild(VRButton.createButton(renderer));
@@ -138,14 +154,13 @@ let ETC_EXT = gl.getExtension("WEBGL_compressed_texture_etc");
 
 if (ASTC_EXT) {
   logger.log("ASTC_EXT", ASTC_EXT);
-  store.supportsASTC = true;
+  // store.supportsASTC = true;
 } else {
   logger.log("no astc");
   // store.supportsASTC = false;
 }
 if (ETC_EXT) {
   logger.log("ETC_EXT", ETC_EXT);
-  store.supportsETC = true;
 } else {
   logger.log("no etc");
 }
@@ -170,18 +185,27 @@ function animate(t, frame) {
   }
 
   //check active layers for redraw
-  for (let i = 0; i < activeLayers.length; i++) {
-    if (activeLayers[i].layer.needsRedraw) {
-      drawWebXRLayer(activeLayers[i], session, frame);
+
+  for (const key of imageManager.activeLayers) {
+    const Image = imageManager.images[key];
+    if (Image.layer.needsRedraw) {
+      drawWebXRLayer(Image, session, frame);
     }
   }
+  // for (let i = 0; i < activeLayers.length; i++) {
+  //   if (activeLayers[i].layer.needsRedraw) {
+  //     drawWebXRLayer(activeLayers[i], session, frame);
+  //   }
+  // }
 
   renderer.render(scene, camera);
   controls.update();
 }
 
 function drawWebXRLayer(layer, session, frame) {
-  if (layer.type === "WebXREquirectangularLayer") {
+  if (layer.type === "Equirectangular") {
+    logger.log("drawing equirectangular layer");
+    // if(layer.format === "ASTC") {
     drawCompressedWebXREquirectangularLayer(layer, frame);
   } else if (layer.type === "WebXRCubeLayer") {
     drawWebXRCubeLayer(layer, session, frame);
@@ -217,7 +241,7 @@ function drawWebXREquirectangularLayer(layer, session, frame) {
 }
 
 function drawCompressedWebXREquirectangularLayer(layer, frame) {
-  let format = eval(layer.format);
+  let format = 37808 //eval(layer.format);
   let width = layer.width;
   let height = layer.height;
 
@@ -233,13 +257,10 @@ function drawCompressedWebXREquirectangularLayer(layer, frame) {
     width,
     height,
     format,
-    layer.textures
+    layer.astcTextureData
   );
   gl.bindTexture(gl.TEXTURE_2D, null);
 
-  if (layer.stereo) {
-    logger.log("add stereo support");
-  }
 }
 
 //currently only handles compressed textures
@@ -515,13 +536,11 @@ function destroyLayer(imagename) {
   layer.destroy();
 }
 
-function setLayer(layerID, isUIlayer = false) {
-  let layerLength = xrSession.renderState.layers.length;
-  activeLayers.push(layers[layerID]);
-  logger.log("layer length", layerLength);
+function setLayer(layer) {
+  // let layerLength = xrSession.renderState.layers.length;
   xrSession.updateRenderState({
     layers: [
-      layers[layerID].layer,
+      layer,
       xrSession.renderState.layers[xrSession.renderState.layers.length - 1],
     ],
   });
@@ -956,6 +975,7 @@ class EquirectangularImage {
   constructor(srcArray, width, height, stereo, id, format) {
     this.type = "Equirectangular";
     this.layer = null;
+    this.astcTextureData = null;
     this.srcArray = srcArray; // Three.js equirectangular texture
     this.astcTexture = null; // Array of ASTC textures
     this.compressedTexture = null;
@@ -966,6 +986,7 @@ class EquirectangularImage {
     this.loaded = false;
     this.id = id;
     this.format = format;
+    this.radius = 20;
     // Validate the format parameter
     const allowedFormats = ["astc_4x4", "ktx2", "img"];
     if (!allowedFormats.includes(format)) {
@@ -977,27 +998,25 @@ class EquirectangularImage {
       );
     }
 
-    
-
     // this.initializeTexture();
   }
 
   async loadAllImages() {
-    if(this.format === null){
+    if (this.format === null) {
       throw new Error("Invalid format");
       return;
     }
-    if(this.srcArray.length < 1){
+    if (this.srcArray.length < 1) {
       throw new Error("No images to load");
       return;
     }
 
-    if(this.format === "img"){
-      await this.loadImage(this.srcArray)
-    }else if (this.format === "astc_4x4"){
+    if (this.format === "img") {
+      await this.loadImage(this.srcArray);
+    } else if (this.format === "astc_4x4") {
       await this.loadAstcFile(this.srcArray, this.width, this.height);
     }
-      this.loaded = true;
+    this.loaded = true;
   }
 
   loadImage(url) {
@@ -1019,10 +1038,10 @@ class EquirectangularImage {
     });
   }
 
-
   async loadAstcFile(url, width, height, format = 37808) {
     console.log("loading ASTC file");
     try {
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -1032,25 +1051,84 @@ class EquirectangularImage {
       logger.log("rawData: ", rawData);
       logger.log("rawDataLength: ", rawData.length);
 
-      // Create a DataView starting from byte offset 16
-      const astcData = new DataView(arrayBuffer, 16);
+      this.astcTextureData = new DataView(arrayBuffer, 16);
+      let astcData;
+      if (this.stereo) {
+    
+        // ASTC header is 16 bytes, data starts after that`
+        const headerSize = 16;
+        const blockSize = 4; // 4x4 block size
+        const blockBytes = 16; // 16 bytes per block
+    
+        // Calculate the number of blocks in the full image
+        const blocksPerRow = width / blockSize;
+        const blocksPerColumn = height / blockSize;
+    
+        // Calculate the number of blocks in the bottom half
+        const bottomHalfBlocks = (blocksPerColumn / 2) * blocksPerRow;
+    
+        // Extract the bottom half data
+        const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
+        const startOffset =
+          headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
+        bottomHalfData.set(
+          rawData.subarray(startOffset, startOffset + bottomHalfData.length)
+        );
+    
+        // Create a DataView for the bottom half data
+        astcData = new DataView(bottomHalfData.buffer);
+      }else{
+        astcData = this.astcTextureData;
+      }
 
+      let calculatedHeight = this.stereo ? height / 2 : height;
       // Create a compressed texture
       const compressedTexture = new CompressedTexture(
-        [{ data: astcData, width, height }], // Mipmaps (can be an array of levels)
+        [{ data: astcData, width, height: this.stereo ? height / 2 : height}], // Mipmaps (can be an array of levels)
         width,
-        height,
+        this.stereo ? height / 2 : height,
         format
       );
-      this.texture = compressedTexture;
-      this.texture.mapping = EquirectangularReflectionMapping;
-      this.texture.needsUpdate = true;
-      renderer.initTexture(this.texture);
+
+      compressedTexture.flipY = false; // Flip the texture vertically
+      compressedTexture.mapping = EquirectangularReflectionMapping;
+      compressedTexture.generateMipmaps = true;
+      compressedTexture.needsUpdate = true;
+      this.compressedTexture = compressedTexture;
+
+      if(store.isImmersiveSession && !this.layer){
+        this.createXRLayer(glBinding, xrSpace);
+      }else{
+
+        const currentDirectory = store.currentWorkingDirectory;
+        if (!imageManager.XRlayerQueue[currentDirectory]) {
+          // If it doesn't exist, create it and set it to an empty array
+          imageManager.XRlayerQueue[currentDirectory] = [];
+        }
+        imageManager.XRlayerQueue[currentDirectory].push(this.id);
+      }
+
     } catch (error) {
       console.error("Error loading ASTC file:", error);
     }
-
   }
+
+  async createXRLayer() {
+   
+      this.layer = glBinding.createEquirectLayer({
+        space: xrSpace,
+        viewPixelWidth: this.width,
+        viewPixelHeight: this.height / (this.stereo ? 2 : 1),
+        layout: this.stereo ? "stereo-top-bottom" : "mono",
+        colorFormat: 37808, //,            // eval(),
+        isStatic: "true",
+      });
+  
+      this.layer.centralHorizontalAngle = Math.PI * 2;
+      this.layer.upperVerticalAngle = -Math.PI / 2.0;
+      this.layer.lowerVerticalAngle = Math.PI / 2.0;
+      this.layer.radius = this.radius;
+    }
 
 
 
@@ -1101,13 +1179,17 @@ class ImageManager {
       return ImageManager.instance;
     }
     this.images = {};
+    this.activeLayers = new Set();
     this.currentImage = null;
+    this.XRlayerQueue = {"/" : [], }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
     ImageManager.instance = this;
   }
 
   addImage(name, imageInstance) {
     this.images[name] = imageInstance;
     downloadManager.addToQueue(imageInstance);
+  
+
   }
 
   removeImage(name) {
@@ -1117,17 +1199,31 @@ class ImageManager {
   selectImage(name) {
     if (this.images[name]) {
       this.currentImage = this.images[name];
-      imageDisplayManager.displayImage(this.currentImage);
+
+      if(store.isImmersiveSession && this.images[name].layer){
+        if(!this.activeLayers.has(name)){
+          this.activeLayers.add(name);
+        }
+        setLayer(this.images[name].layer);
+      }else{
+        imageDisplayManager.displayImage(this.currentImage);
+      }
     } else {
       logger.warn(`Image ${name} not found`);
     }
   }
 
   async createImageObjects(imageData) {
-    if (imageData.groupId in this.images) {
+
+   
+    if(imageData.groupId in this.images) {
+      if(store.isImmersiveSession && !this.images[imageData.groupId].layer){
+        this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
+      }
       logger.log("image already exists");
       return;
     }
+    
     // logger.log("creating image objects");
     if (imageData.format_360 === "equirectangular") {
       let imageArr = JSON.parse(imageData.faces);
@@ -1137,8 +1233,8 @@ class ImageManager {
         imageData.width,
         imageData.height,
         false,
-        imageData.groupId, 
-        imageData.textureFormat,
+        imageData.groupId,
+        imageData.textureFormat
       );
       this.addImage(imageData.groupId, equirectangularImage);
     } else if (imageData.format_360 === "stereo_equirectangular") {
@@ -1150,7 +1246,7 @@ class ImageManager {
         imageData.height,
         true,
         imageData.groupId,
-        imageData.textureFormat,
+        imageData.textureFormat
       );
       this.addImage(imageData.groupId, equirectangularImage);
     } else if (imageData.format_360 === "cubemap") {
@@ -1175,6 +1271,36 @@ class ImageManager {
       this.addImage(imageData.groupId, cubeLayer);
     }
   }
+
+   async processLayerQueue() {
+ 
+    //check current image
+   
+    if (this.currentImage ) {
+      if(!this.currentImage.layer){
+        await this.currentImage.createXRLayer(glBinding, xrSpace);
+        this.selectImage(this.currentImage.id);
+      }
+     
+    }
+
+    //check all images in the queue
+    let cwd = store.currentWorkingDirectory;
+    let layersInCWD = this.XRlayerQueue[cwd];
+
+    for(let i = 0; i < layersInCWD.length; i++){
+      if(this.currentImage && layersInCWD[i] === this.currentImage.id){return;}
+      if(!this.images[layersInCWD[i]].layer){
+        this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
+        this.activeLayers.add(layersInCWD[i]);
+      }
+    }
+
+
+
+    console.log("processing layer queue");
+
+  }
 }
 
 class ImageDisplayManager {
@@ -1184,22 +1310,22 @@ class ImageDisplayManager {
 
   displayImage(image) {
     logger.log("displaying image");
-    if(store.supportsASTC){
+    if (store.supportsASTC) {
       logger.log("supports ASTC");
-      if(image.compressedTexture){
+      if (image.compressedTexture) {
         this.scene.background = image.compressedTexture;
-      }else{
+      } else {
         logger.log("no compressed texture found");
-        if(image.texture){
+        if (image.texture) {
           this.scene.background = image.texture;
-        }else{
+        } else {
           logger.log("no alt texture found");
         }
       }
-    }else{
-      if(image.texture){
+    } else {
+      if (image.texture) {
         this.scene.background = image.texture;
-      }else{
+      } else {
         logger.log("no texture found");
       }
     }
@@ -1458,8 +1584,7 @@ async function loadInCompressedCubeMap(urls) {
 
 window.loadInCompressedCubeMap = loadInCompressedCubeMap;
 
-
-async function loadCompressedEqrt(){
+async function loadCompressedEqrt() {
   let width = 1024;
   let height = 1024;
   let url = `${cdnPath}/73c135cc0dd834e59368ce6761536b16.astc`;
@@ -1473,7 +1598,7 @@ async function loadCompressedEqrt(){
     logger.log("rawData: ", rawData);
     logger.log("rawDataLength: ", rawData.length);
 
-    // ASTC header is 16 bytes, data starts after that
+    // ASTC header is 16 bytes, data starts after that`
     const headerSize = 16;
     const blockSize = 4; // 4x4 block size
     const blockBytes = 16; // 16 bytes per block
@@ -1487,8 +1612,11 @@ async function loadCompressedEqrt(){
 
     // Extract the bottom half data
     const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
-    const startOffset = headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
-    bottomHalfData.set(rawData.subarray(startOffset, startOffset + bottomHalfData.length));
+    const startOffset =
+      headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
+    bottomHalfData.set(
+      rawData.subarray(startOffset, startOffset + bottomHalfData.length)
+    );
 
     // Create a DataView for the bottom half data
     const astcData = new DataView(bottomHalfData.buffer);
@@ -1498,7 +1626,7 @@ async function loadCompressedEqrt(){
       [{ data: astcData, width, height: height / 2 }], // Mipmaps (can be an array of levels)
       width,
       height / 2,
-      37808, // Use appropriate ASTC format
+      37808 // Use appropriate ASTC format
     );
 
     // // Create a DataView starting from byte offset 16
@@ -1506,7 +1634,7 @@ async function loadCompressedEqrt(){
 
     // // Create a compressed texture
     // const compressedTexture = new CompressedTexture(
-    //   [{ data: astcData, width, height }], 
+    //   [{ data: astcData, width, height }],
     //   width,
     //   height,
     //   37808
@@ -1516,17 +1644,25 @@ async function loadCompressedEqrt(){
     compressedTexture.needsUpdate = true;
     compressedTexture.generateMipmaps = true;
     scene.background = compressedTexture;
-
   } catch (error) {
     console.error("Error loading ASTC file:", error);
   }
-
 }
 
-
-
-function makeSceneBlue(){
+function makeSceneBlue() {
   scene.background = new Color(0x0000ff);
 }
 window.makeSceneBlue = makeSceneBlue;
 window.loadCompressedEqrt = loadCompressedEqrt;
+
+
+
+
+function requestImmersiveSession(){
+
+}
+
+
+function createXRLayerBeforeVRMode(){
+
+}
