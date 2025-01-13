@@ -53,8 +53,10 @@ import {
 // import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 import { registerLicense } from "@syncfusion/ej2-base";
 registerLicense(
-  "Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
+  "Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3THxbf1x1ZFFMYF5bQHFPIiBoS35Rc0ViWH1fdnRXQmdYUkZ+"  
 );
+//"Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
+
 import { createWebWorkers } from "./workers/workerManager.js";
 import { getMainStore } from './store/main';
 import * as nonVREventHandlers from "./eventHandlers.js";
