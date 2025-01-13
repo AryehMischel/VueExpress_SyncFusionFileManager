@@ -7,11 +7,10 @@ import { getMainStore } from "./store/main";
 const logger = new Logger("eventHandlers", true);
 let store;
 
-
 export const onCreated = async (args) => {
   store = getMainStore();
   logger.log("on create for non VR ", !store.isVR);
-}
+};
 
 export const onBeforeSend = async (args, fileManagerRef) => {
   if (args.action === "read") {
@@ -21,9 +20,7 @@ export const onBeforeSend = async (args, fileManagerRef) => {
       const requestData = JSON.parse(args.ajaxSettings.data);
       requestData.requestedFormat = "img";
       args.ajaxSettings.data = JSON.stringify(requestData);
-}
-    // args.ajaxSettings.data = JSON.stringify({"message from frontend": "any message really"});
-    // logger.log("requesting images from server...");
+    }
   }
 
   if (args.action === "Upload") {
@@ -96,6 +93,22 @@ export const onSuccess = async (args, state) => {
   if (args.action === "read") {
     logger.log("read results non VR:", args.result);
 
+    // let uploadingImages = store.getProgressValues;
+
+    // logger.log("uploadingImages", uploadingImages);
+
+    // for (let key in uploadingImages) {
+    //   let uiElement = document.querySelector(`[data-image-id="${key}"]`);
+
+    //   if (uiElement) {
+    //     const progressElement = Array.from(
+    //       uiElement.querySelectorAll("[aria-label]")
+    //     ).find((el) => el.getAttribute("aria-label").includes("Progress"));
+
+    //     if (progressElement) attachProgressBar(progressElement, key);
+    //   }
+    // }
+
     for (let i = 0; i < args.result.files.length; i++) {
       const file = args.result.files[i];
       if (file.isFile) {
@@ -116,8 +129,25 @@ export const onSuccess = async (args, state) => {
     } else {
       logger.error("Unexpected response structure:", args.result);
     }
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // initializeProgressBars();
   }
 };
+
+// function initializeProgressBars(){
+//   console.log("Initializing progress bars");
+//   const progressBars = document.querySelectorAll('.progress-bar');
+//   progressBars.forEach((bar) => {
+//     const value = parseInt(bar.getAttribute('data-value'), 10);
+//     new EjsProgressbar({
+//       type: 'Linear',
+//       height: '20px',
+//       width: '100px',
+//       value,
+//     }).appendTo(bar);
+//   });
+// };
 
 export const onFileOpen = (args) => {};
 
@@ -147,8 +177,20 @@ export const onBeforePopupOpen = (args) => {
 
 export const onFileLoad = async (args) => {
   if (args.fileDetails.isFile) {
+    let isLoading = store.isFileLoading(args.fileDetails.groupId);
+    if (isLoading) {
+      logger.log("File is already loading:", args);
+      store.updateProgress(args.fileDetails.groupId, 0);
+      const progressElement = Array.from(
+        args.element.querySelectorAll("[aria-label]")
+      ).find((el) => el.getAttribute("aria-label").includes("Progress"));
+      if (progressElement) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+          attachProgressBar(progressElement, args.fileDetails.groupId);
+      }
+    }
     logger.log("File loaded:", args);
-
+    args.element.setAttribute("data-image-id", args.fileDetails.groupId);
     args.element.addEventListener("click", () => {
       imageManager.selectImage(`${args.fileDetails.groupId}`);
     });

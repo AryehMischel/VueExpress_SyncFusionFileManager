@@ -5,5 +5,5 @@ export function ensureAuthenticated(req, res, next) {
   if (req.isAuthenticated()) {
     return next();
   }
-  res.redirect("/fail"); // Redirect to fail page if not authenticated
+  res.redirect('/signin');
 }

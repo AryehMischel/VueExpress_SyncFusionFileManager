@@ -13,6 +13,7 @@ export const useMainStore = defineStore('main', {
     supportsETC: false,
     isImmersiveSession: false,
     currentWorkingDirectory: "",
+    progressValues: {},
     // Add other global state properties here
   }),
   actions: {
@@ -37,6 +38,10 @@ export const useMainStore = defineStore('main', {
     setWorkingDirectory(path) {
       this.currentWorkingDirectory = path;
     },
+    updateProgress(id, value) {
+      this.progressValues[id] = value;
+    },
+
     // Add other actions here
   },
   getters: {
@@ -46,6 +51,11 @@ export const useMainStore = defineStore('main', {
     getSupportsETC: (state) => state.supportsETC,
     getImmersiveSession: (state) => state.isImmersiveSession,
     getWorkingDirectory: (state) => state.currentWorkingDirectory,
+    getProgressValues: (state) => state.progressValues,
+    isFileLoading: (state) => (id) => {
+      return state.progressValues[id] > 0 && state.progressValues[id] < 100;
+    },
+   
     // Add other getters here
   }
 });

@@ -1,3 +1,6 @@
+import { h } from 'vue';
+import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
+
 export const ajaxSettings = {
     url: "http://localhost:3000/api/filemanager/actions",
     getImageUrl: "http://localhost:3000/api/filemanager/getImage",
@@ -76,6 +79,12 @@ export const ajaxSettings = {
         headerText: "Processed",
         template: '<span>${processed}</span>',
       },
+      {
+        field: "progress",
+        headerText: "Progress",
+        template: '<div id="progress-${_id}" class="progress-bar" data-value="50"></div>',
+      },
+      
     ],
   };
 
@@ -85,14 +94,13 @@ export const ajaxSettings = {
   export const uploadSettings = {
     showFileUploadDialog: false,
     allowUpload: true,
-    maxFileSize: 50 * 1024 * 1024, // 50 MB
+    maxFileSize: 200 * 1024 * 1024, // 200 MB
     // autoUpload: false,
     AllowedExtensions: "jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
     // AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
 
   };
 
-  
 
 // const uploadSettings = {
 //   showFileUploadDialog: false,

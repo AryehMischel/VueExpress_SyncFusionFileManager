@@ -43,6 +43,13 @@
 </script>
 
 <script>
+
+  // Ensure that the function is called after the file manager is initialized
+window.addEventListener('load', () => {
+  if (window.addProgressBar) {
+    window.addProgressBar();
+  }
+});
     const panel = $("#app").draggable();
     const snapThreshold = 10; // pixels from edge to trigger snap
 

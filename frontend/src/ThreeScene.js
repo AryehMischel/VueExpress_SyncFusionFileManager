@@ -67,6 +67,12 @@ window.currSelectedItem = currSelectedItem;
 let logger = new Logger("ThreeScene", true);
 let store;
 
+//threejs consts for gl formats
+
+let formats = {
+  astc_4x4: 37808,
+};
+
 try {
   let layersPolyfill = new WebXRLayersPolyfill();
 } catch {
@@ -119,8 +125,10 @@ renderer.xr.addEventListener("sessionstart", async () => {
   addFileManagerVR();
   await new Promise((resolve) => setTimeout(resolve, 500));
   imageManager.processLayerQueue();
-})
-renderer.xr.addEventListener("sessionend", () => store.setImmersiveSession(false));
+});
+renderer.xr.addEventListener("sessionend", () =>
+  store.setImmersiveSession(false)
+);
 
 //add vr button
 document.body.appendChild(VRButton.createButton(renderer));
@@ -207,13 +215,18 @@ function drawWebXRLayer(layer, session, frame) {
     logger.log("drawing equirectangular layer");
     // if(layer.format === "ASTC") {
     drawCompressedWebXREquirectangularLayer(layer, frame);
-  } else if (layer.type === "WebXRCubeLayer") {
-    drawWebXRCubeLayer(layer, session, frame);
-  } else if (layer.type === "WebXRQuadLayer") {
-    drawWebXRQuadLayer(layer, session, frame);
-  } else if (layer.type === "WebXRQuadUILayer") {
-    drawWebXRQuadUILayer(layer, session, frame);
+  } else if (layer.type === "CubeMap") {
+    logger.log("drawing CubeMap layer");
+    drawCubeMapLayer(layer, frame);
   }
+
+  // else if (layer.type === "WebXRCubeLayer") {
+  //   drawWebXRCubeLayer(layer, session, frame);
+  // } else if (layer.type === "WebXRQuadLayer") {
+  //   drawWebXRQuadLayer(layer, session, frame);
+  // } else if (layer.type === "WebXRQuadUILayer") {
+  //   drawWebXRQuadUILayer(layer, session, frame);
+  // }
 }
 
 function drawWebXREquirectangularLayer(layer, session, frame) {
@@ -240,8 +253,52 @@ function drawWebXREquirectangularLayer(layer, session, frame) {
   }
 }
 
+function drawCubeMapLayer(layer, frame) {
+  let format = formats[layer.format];
+  let width = layer.width;
+  let height = layer.height;
+
+  if (!layer.stereo) {
+    let glayer = glBinding.getSubImage(layer.layer, frame);
+    bindCompressedCubeMap(glayer, layer.astcTextureData[0]);
+  } else {
+    let glayer = glBinding.getSubImage(layer.layer, frame, "left");
+    bindCompressedCubeMap(glayer, layer.astcTextureData[0]);
+    glayer = glBinding.getSubImage(layer.layer, frame, "right");
+    bindCompressedCubeMap(glayer, layer.astcTextureData[1]);
+  }
+
+  function bindCompressedCubeMap(glayer, textures) {
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, glayer.colorTexture);
+
+    const faces = [
+      gl.TEXTURE_CUBE_MAP_POSITIVE_X,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_X,
+      gl.TEXTURE_CUBE_MAP_POSITIVE_Y,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_Y,
+      gl.TEXTURE_CUBE_MAP_POSITIVE_Z,
+      gl.TEXTURE_CUBE_MAP_NEGATIVE_Z,
+    ];
+
+    for (let i = 0; i < faces.length; i++) {
+      gl.compressedTexSubImage2D(
+        faces[i],
+        0,
+        0,
+        0,
+        width,
+        width,
+        format,
+        textures[i]
+      );
+    }
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+  }
+}
+
 function drawCompressedWebXREquirectangularLayer(layer, frame) {
-  let format = 37808 //eval(layer.format);
+  let format = formats[layer.format]; //37808 //eval(layer.format);
   let width = layer.width;
   let height = layer.height;
 
@@ -260,7 +317,6 @@ function drawCompressedWebXREquirectangularLayer(layer, frame) {
     layer.astcTextureData
   );
   gl.bindTexture(gl.TEXTURE_2D, null);
-
 }
 
 //currently only handles compressed textures
@@ -876,77 +932,183 @@ class WebXRQuadUILayer {
 }
 
 class CubeLayer {
-  constructor(faces, width, height, stereo, id) {
+  constructor(srcArray, width, height, stereo, id, format) {
+    this.type = "CubeMap";
     this.layer = null;
     this.texture = null;
-    this.faces = faces;
+    this.srcArray = srcArray;
+    this.astcTextureData = [[], []];
     this.stereo = stereo;
-    this.format = 37808; // ASTC format
+    this.format = format; // ASTC format
     this.width = width;
     this.height = height;
-    this.type = "CubeLayer";
     this.loaded = false;
     this.id = id;
     // this.initializeTexture();
   }
 
   async loadAllImages() {
-    logger.log("loading textures for cube layer: ", this.id);
-    let firstSixUrls = this.faces.slice(0, 6);
-    await this.createCubeTexture(firstSixUrls);
-    logger.log("finished loading textures for cube layer: ", this.id);
-    this.loaded = true;
-    firstSixUrls = null;
-  }
+    if (this.format === null) {
+      throw new Error("Invalid format");
+      return;
+    }
+    if (this.srcArray.length < 1) {
+      throw new Error("No images to load");
+      return;
+    }
 
-  createCubeTexture(urls) {
-    return new Promise((resolve, reject) => {
-      logger.log("creating cubemap texture");
-      let loader = new CubeTextureLoader();
-      loader.setPath(cdnPath + "/");
-      loader.load(
-        urls,
-        (texture) => {
-          this.texture = texture;
-          this.texture.needsUpdate = true;
-          renderer.initTexture(this.texture);
-          resolve();
-        },
-        undefined,
-        (error) => {
-          reject(error);
-        }
+    if (this.format === "img") {
+      logger.log("does this ever actually run?");
+      //await this.loadImage(this.srcArray)
+      let firstSixUrls = this.srcArray.slice(0, 6);
+      await this.createCubeTexture(firstSixUrls);
+      firstSixUrls = null;
+    } else if (this.format === "astc_4x4") {
+      let firstSixUrls = this.srcArray.slice(0, 6);
+      await this.loadAstcCube(
+        firstSixUrls,
+        this.width,
+        this.height,
+        formats[this.format]
       );
-    });
+      if (this.stereo) {
+        logger.log("getting last six urls");
+        let lastSixUrls = this.srcArray.slice(6, 12);
+        await this.loadAstcTextures(
+          lastSixUrls,
+          this.width,
+          this.height,
+          formats[this.format]
+        );
+        lastSixUrls = null;
+      } else {
+        if (store.isImmersiveSession && !this.layer) {
+          this.createXRLayer(glBinding, xrSpace);
+        } else {
+          const currentDirectory = store.currentWorkingDirectory;
+          if (!imageManager.XRlayerQueue[currentDirectory]) {
+            // If it doesn't exist, create it and set it to an empty array
+            imageManager.XRlayerQueue[currentDirectory] = [];
+          }
+          imageManager.XRlayerQueue[currentDirectory].push(this.id);
+        }
+      }
+      firstSixUrls = null;
+    }
+    this.loaded = true;
   }
 
+  async loadAstcCube(urls, width, height, format) {
+    try {
+      const promises = urls.map(async (url) => {
+        logger.log("Fetching URL:", url);
+        const response = await fetch(cdnPath + "/" + url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const rawData = new Uint8Array(arrayBuffer);
+        logger.log("rawData: ", rawData);
+        logger.log("rawDataLength: ", rawData.length);
+
+        // Create a DataView starting from byte offset 16
+        const astcData = new Uint8Array(arrayBuffer, 16); // Skip the ASTC header
+        return {
+          data: astcData,
+          width,
+          height,
+          format,
+        };
+      });
+
+      const facesData = await Promise.all(promises);
+      this.astcTextureData[0] = facesData.map(face => face.data);
+
+      logger.log("Faces data:", facesData);
+
+      const compressedTexture = new CompressedCubeTexture(
+        facesData.map((face) => ({
+          mipmaps: [
+            { data: face.data, width: face.width, height: face.height },
+          ],
+          width: face.width,
+          height: face.height,
+          format: face.format,
+        })),
+        37808,
+        UnsignedByteType
+      );
+
+      //   compressedTexture.minFilter = LinearMipmapLinearFilter;
+      //   compressedTexture.magFilter = LinearFilter;
+      //   compressedTexture.generateMipmaps = true;
+      compressedTexture.needsUpdate = true;
+      this.compressedTexture = compressedTexture;
+    } catch (error) {
+      logger.error("Error loading compressed cube map:", error);
+      throw error;
+    }
+  }
+
+  async loadAstcTextures(urls, width, height, format) {
+    logger.log("getting last six urls");
+    try {
+      const promises = urls.map(async (url) => {
+        logger.log("Fetching URL:", url);
+        const response = await fetch(cdnPath + "/" + url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const rawData = new Uint8Array(arrayBuffer);
+        // Create a DataView starting from byte offset 16
+        const astcData = new Uint8Array(arrayBuffer, 16); // Skip the ASTC header
+        return astcData;
+      });
+
+      // Wait for all promises to resolve and get the astcData array
+      const astcDataArray = await Promise.all(promises);
+      logger.log("ASTC Data Array:", astcDataArray);
+
+      // Now you have the astcDataArray with the data in the order they were fetched
+      this.astcTextureData[1] = astcDataArray;
+
+      if (store.isImmersiveSession && !this.layer) {
+        this.createXRLayer(glBinding, xrSpace);
+      } else {
+        const currentDirectory = store.currentWorkingDirectory;
+        if (!imageManager.XRlayerQueue[currentDirectory]) {
+          // If it doesn't exist, create it and set it to an empty array
+          imageManager.XRlayerQueue[currentDirectory] = [];
+        }
+        imageManager.XRlayerQueue[currentDirectory].push(this.id);
+      }
+    } catch (error) {
+      logger.error("Error loading compressed cube map:", error);
+      throw error;
+    }
+  }
+
+  async createCubeTexture(urls) {
+    logger.log("urls without cdn", urls);
+    let loader = new CubeTextureLoader();
+    loader.setPath(cdnPath + "/");
+
+    try {
+      logger.log("CREATING CUBEMAP TEXTURE FROM IMAGES");
+      const texture = await new Promise((resolve, reject) => {
+        loader.load(urls, resolve, undefined, reject);
+      });
+
+      this.texture = texture;
+      this.texture.needsUpdate = true;
+      renderer.initTexture(this.texture);
+    } catch (error) {
+      logger.error("Error creating cubemap texture:", error);
+      throw error;
+    }
+  }
   async loadKTX2Files() {}
-
-  async loadAstcFiles() {
-    // const response = await fetch(url);
-    // if (!response.ok) {
-    //   throw new Error(`HTTP error! status: ${response.status}`);
-    // }
-    // const arrayBuffer = await response.arrayBuffer();
-    // var rawData = new Uint8Array(arrayBuffer);
-    // logger.log("rawData: ", rawData);
-    // logger.log("rawDataLength: ", rawData.Length);
-    // // Create a DataView starting from byte offset 16
-    // const astcData = new DataView(arrayBuffer, 16);
-    // const width = 1536; // Width of the texture
-    // const height = 1536; // Height of the texture
-    // const format = 37808; //THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
-    // // Create a compressed texture
-    // const compressedTexture = new CompressedTexture(
-    //   [{ data: astcData, width, height }], // Mipmaps (can be an array of levels)
-    //   width,
-    //   height,
-    //   format
-    // );
-    // compressedTexture.minFilter = LinearMipmapLinearFilter;
-    // compressedTexture.magFilter = LinearFilter;
-    // compressedTexture.needsUpdate = true;
-  }
 
   // Method to create the WebXR layer
   createXRLayer(glBinding, xrSpace) {
@@ -955,14 +1117,9 @@ class CubeLayer {
       viewPixelWidth: this.width,
       viewPixelHeight: this.height,
       layout: this.stereo ? "stereo" : "mono",
-      colorFormat: this.format,
+      colorFormat: formats[this.format],
       isStatic: false,
     });
-  }
-
-  // Method to create a Three.js texture
-  createThreeTexture() {
-    // Texture is already created in loadImages
   }
 
   // Method to check if the layer is stereo
@@ -1041,7 +1198,6 @@ class EquirectangularImage {
   async loadAstcFile(url, width, height, format = 37808) {
     console.log("loading ASTC file");
     try {
-
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -1054,19 +1210,18 @@ class EquirectangularImage {
       this.astcTextureData = new DataView(arrayBuffer, 16);
       let astcData;
       if (this.stereo) {
-    
         // ASTC header is 16 bytes, data starts after that`
         const headerSize = 16;
         const blockSize = 4; // 4x4 block size
         const blockBytes = 16; // 16 bytes per block
-    
+
         // Calculate the number of blocks in the full image
         const blocksPerRow = width / blockSize;
         const blocksPerColumn = height / blockSize;
-    
+
         // Calculate the number of blocks in the bottom half
         const bottomHalfBlocks = (blocksPerColumn / 2) * blocksPerRow;
-    
+
         // Extract the bottom half data
         const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
         const startOffset =
@@ -1074,17 +1229,17 @@ class EquirectangularImage {
         bottomHalfData.set(
           rawData.subarray(startOffset, startOffset + bottomHalfData.length)
         );
-    
+
         // Create a DataView for the bottom half data
         astcData = new DataView(bottomHalfData.buffer);
-      }else{
+      } else {
         astcData = this.astcTextureData;
       }
 
       let calculatedHeight = this.stereo ? height / 2 : height;
       // Create a compressed texture
       const compressedTexture = new CompressedTexture(
-        [{ data: astcData, width, height: this.stereo ? height / 2 : height}], // Mipmaps (can be an array of levels)
+        [{ data: astcData, width, height: this.stereo ? height / 2 : height }], // Mipmaps (can be an array of levels)
         width,
         this.stereo ? height / 2 : height,
         format
@@ -1096,10 +1251,9 @@ class EquirectangularImage {
       compressedTexture.needsUpdate = true;
       this.compressedTexture = compressedTexture;
 
-      if(store.isImmersiveSession && !this.layer){
+      if (store.isImmersiveSession && !this.layer) {
         this.createXRLayer(glBinding, xrSpace);
-      }else{
-
+      } else {
         const currentDirectory = store.currentWorkingDirectory;
         if (!imageManager.XRlayerQueue[currentDirectory]) {
           // If it doesn't exist, create it and set it to an empty array
@@ -1107,69 +1261,25 @@ class EquirectangularImage {
         }
         imageManager.XRlayerQueue[currentDirectory].push(this.id);
       }
-
     } catch (error) {
       console.error("Error loading ASTC file:", error);
     }
   }
 
   async createXRLayer() {
-   
-      this.layer = glBinding.createEquirectLayer({
-        space: xrSpace,
-        viewPixelWidth: this.width,
-        viewPixelHeight: this.height / (this.stereo ? 2 : 1),
-        layout: this.stereo ? "stereo-top-bottom" : "mono",
-        colorFormat: 37808, //,            // eval(),
-        isStatic: "true",
-      });
-  
-      this.layer.centralHorizontalAngle = Math.PI * 2;
-      this.layer.upperVerticalAngle = -Math.PI / 2.0;
-      this.layer.lowerVerticalAngle = Math.PI / 2.0;
-      this.layer.radius = this.radius;
-    }
+    this.layer = glBinding.createEquirectLayer({
+      space: xrSpace,
+      viewPixelWidth: this.width,
+      viewPixelHeight: this.height / (this.stereo ? 2 : 1),
+      layout: this.stereo ? "stereo-top-bottom" : "mono",
+      colorFormat: 37808, //,            // eval(),
+      isStatic: "true",
+    });
 
-
-
-
-}
-
-class StateManager {
-  constructor() {
-    if (StateManager.instance) {
-      return StateManager.instance;
-    }
-
-    this.availableExtensions = {};
-    this.isVR = false;
-    this.isImmersiveSession = false;
-
-    StateManager.instance = this;
-  }
-
-  setAvailableExtensions(extensions) {
-    this.availableExtensions = extensions;
-  }
-
-  setVRMode(isVR) {
-    this.isVR = isVR;
-  }
-
-  setImmersiveSession(isImmersive) {
-    this.isImmersiveSession = isImmersive;
-  }
-
-  getAvailableExtensions() {
-    return this.availableExtensions;
-  }
-
-  getVRMode() {
-    return this.isVR;
-  }
-
-  getImmersiveSession() {
-    return this.isImmersiveSession;
+    this.layer.centralHorizontalAngle = Math.PI * 2;
+    this.layer.upperVerticalAngle = -Math.PI / 2.0;
+    this.layer.lowerVerticalAngle = Math.PI / 2.0;
+    this.layer.radius = this.radius;
   }
 }
 
@@ -1181,15 +1291,13 @@ class ImageManager {
     this.images = {};
     this.activeLayers = new Set();
     this.currentImage = null;
-    this.XRlayerQueue = {"/" : [], }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
+    this.XRlayerQueue = { "/": [] }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
     ImageManager.instance = this;
   }
 
   addImage(name, imageInstance) {
     this.images[name] = imageInstance;
     downloadManager.addToQueue(imageInstance);
-  
-
   }
 
   removeImage(name) {
@@ -1200,12 +1308,12 @@ class ImageManager {
     if (this.images[name]) {
       this.currentImage = this.images[name];
 
-      if(store.isImmersiveSession && this.images[name].layer){
-        if(!this.activeLayers.has(name)){
+      if (store.isImmersiveSession && this.images[name].layer) {
+        if (!this.activeLayers.has(name)) {
           this.activeLayers.add(name);
         }
         setLayer(this.images[name].layer);
-      }else{
+      } else {
         imageDisplayManager.displayImage(this.currentImage);
       }
     } else {
@@ -1214,16 +1322,14 @@ class ImageManager {
   }
 
   async createImageObjects(imageData) {
-
-   
-    if(imageData.groupId in this.images) {
-      if(store.isImmersiveSession && !this.images[imageData.groupId].layer){
+    if (imageData.groupId in this.images) {
+      if (store.isImmersiveSession && !this.images[imageData.groupId].layer) {
         this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
       }
       logger.log("image already exists");
       return;
     }
-    
+
     // logger.log("creating image objects");
     if (imageData.format_360 === "equirectangular") {
       let imageArr = JSON.parse(imageData.faces);
@@ -1250,56 +1356,57 @@ class ImageManager {
       );
       this.addImage(imageData.groupId, equirectangularImage);
     } else if (imageData.format_360 === "cubemap") {
+      logger.log("creating cubemap of type", imageData.textureFormat);
       let faces = JSON.parse(imageData.faces);
       let cubeLayer = new CubeLayer(
         faces,
         imageData.width,
         imageData.height,
         false,
-        imageData.groupId
+        imageData.groupId,
+        imageData.textureFormat
       );
       this.addImage(imageData.groupId, cubeLayer);
     } else if (imageData.format_360 === "stereo_cubemap") {
+      logger.log("creating cubemap of type", imageData.textureFormat);
       let faces = JSON.parse(imageData.faces);
       let cubeLayer = new CubeLayer(
         faces,
         imageData.width,
         imageData.height,
         true,
-        imageData.groupId
+        imageData.groupId,
+        imageData.textureFormat
       );
       this.addImage(imageData.groupId, cubeLayer);
     }
   }
 
-   async processLayerQueue() {
- 
+  async processLayerQueue() {
     //check current image
-   
-    if (this.currentImage ) {
-      if(!this.currentImage.layer){
+
+    if (this.currentImage) {
+      if (!this.currentImage.layer) {
         await this.currentImage.createXRLayer(glBinding, xrSpace);
         this.selectImage(this.currentImage.id);
       }
-     
     }
 
     //check all images in the queue
     let cwd = store.currentWorkingDirectory;
     let layersInCWD = this.XRlayerQueue[cwd];
 
-    for(let i = 0; i < layersInCWD.length; i++){
-      if(this.currentImage && layersInCWD[i] === this.currentImage.id){return;}
-      if(!this.images[layersInCWD[i]].layer){
+    for (let i = 0; i < layersInCWD.length; i++) {
+      if (this.currentImage && layersInCWD[i] === this.currentImage.id) {
+        return;
+      }
+      if (!this.images[layersInCWD[i]].layer) {
         this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
         this.activeLayers.add(layersInCWD[i]);
       }
     }
 
-
-
     console.log("processing layer queue");
-
   }
 }
 
@@ -1323,6 +1430,7 @@ class ImageDisplayManager {
         }
       }
     } else {
+      logger.log("image", image);
       if (image.texture) {
         this.scene.background = image.texture;
       } else {
@@ -1382,13 +1490,11 @@ class DownloadManager {
 const downloadManager = new DownloadManager();
 const imageDisplayManager = new ImageDisplayManager(scene);
 const imageManager = new ImageManager();
-const stateManager = new StateManager();
 window.imageManager = imageManager;
-window.ThreeStateManager = stateManager;
 window.imageDisplayManager = imageDisplayManager;
 window.downloadManager = downloadManager;
 
-export { imageManager, StateManager };
+export { imageManager };
 
 // VR UI
 
@@ -1655,14 +1761,6 @@ function makeSceneBlue() {
 window.makeSceneBlue = makeSceneBlue;
 window.loadCompressedEqrt = loadCompressedEqrt;
 
+function requestImmersiveSession() {}
 
-
-
-function requestImmersiveSession(){
-
-}
-
-
-function createXRLayerBeforeVRMode(){
-
-}
+function createXRLayerBeforeVRMode() {}

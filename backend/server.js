@@ -12,7 +12,7 @@ import connectSessionSequelize from "connect-session-sequelize";
 const SequelizeStore = connectSessionSequelize(session.Store);
 import { createUploadsDir } from "./utils/fileUtils.js";
 import { connectToDatabase, connectToDatabase2 } from "./services/dbService.js";
-
+import { ensureAuthenticated } from "./middleware/authMiddleware.js";
 // Routes
 import fileManagerRoutes from "./routes/fileManagerRoutes.js";
 import indexRoutes from "./routes/index.js";
@@ -62,8 +62,7 @@ app.use(bodyParser.json());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static(path.join(__dirname, "public/dist")));
+
 
 // Connect to the database
 connectToDatabase();
@@ -73,10 +72,43 @@ connectToDatabase2();
 // createUploadsDir();
 
 // Use routes
+// app.use("/", indexRoutes);
+
+// Serve the sign-in page
+// app.get('/signin', (req, res) => {
+//   res.sendFile(path.join((__dirname, 'public', 'signin.html')));
+// });
+
+// // Serve the blocked page
+// app.get('/blocked', (req, res) => {
+//   res.sendFile(join(__dirname, 'public', 'blocked.html'));
+// });
+app.get('/signin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'signin.html'));
+});
+
+// Serve the blocked page
+app.get('/blocked', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'blocked.html'));
+});
+
+app.use('/auth', authRoutes);
+
+
+// Apply authentication middleware to the base path
+app.use(ensureAuthenticated);
+
 app.use("/api/filemanager", fileManagerRoutes);
-app.use('/auth', authRoutes); 
-app.use("/api/s3", s3Routes); 
-app.use("/", indexRoutes);
+app.use("/api/s3", s3Routes);
+// app.use("/", indexRoutes);
+
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public/dist")));
+
+// Serve the frontend for authenticated users
+app.get('*', ensureAuthenticated, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/dist', 'index.html'));
+});
 
 // Server
 const PORT = process.env.PORT || 3000;

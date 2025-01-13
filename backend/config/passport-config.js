@@ -22,6 +22,19 @@ passport.use(
           port: process.env.RDS_PORT,
         });
 
+        console.log("EMAIL", profile.emails[0].value);
+
+        // Check if the user's email is in the approved_users table
+        const [approvedRows] = await connection.execute(
+          `SELECT COUNT(*) as count FROM approved_users WHERE email = ?`,
+          [profile.emails[0].value]
+        );
+
+        if (approvedRows[0].count === 0) {
+          // User's email is not approved, log them out
+          connection.end();
+          return done(null, false, { message: "Email not approved" });
+        }
         // Query the database to find or create the user
         const [rows] = await connection.execute(
           `SELECT id FROM users WHERE google_id = '${profile.id}'`

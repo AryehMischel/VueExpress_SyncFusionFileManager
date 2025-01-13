@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@syncfusion/ej2-vue-progressbar": "^28.1.33",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "pinia": "^2.3.0",
