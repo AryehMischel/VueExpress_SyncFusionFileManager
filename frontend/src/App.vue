@@ -226,5 +226,6 @@ const fileManagerSettings = computed(() => {
 });
 </script>
 
-<style src="./App.css"></style>
+<style>
+@import "https://cdn.syncfusion.com/ej2/27.1.48/fabric-dark.css";</style>
 
