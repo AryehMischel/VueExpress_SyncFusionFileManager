@@ -1339,6 +1339,7 @@ class ImageManager {
           this.activeLayers.add(name);
         }
         if(scene.background){
+          logger.log("removing scene background");
           scene.background = null;
         }
         setLayer(this.images[name].layer);
@@ -1446,7 +1447,7 @@ class ImageManager {
     for (let i = 0; i < layersInCWD.length; i++) {
       if (!this.images[layersInCWD[i]].layer) {
         this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
-        this.activeLayers.add(layersInCWD[i]);
+        // this.activeLayers.add(layersInCWD[i]);
       }
     }
 

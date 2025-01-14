@@ -98,8 +98,9 @@ export const onSuccess = async (args, state) => {
       
       if (file.isFile) {
         const hasTexture = imageManager.images?.[file.groupId]?.texture;
+        const hasCompressedTexture = imageManager.images?.[file.groupId]?.compressedTexture;
     
-        if (!hasTexture && file.processed) {
+        if (!hasTexture && !hasCompressedTexture && file.processed) {
           imageManager.createImageObjects(file);
         }
       }
