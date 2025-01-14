@@ -148,7 +148,7 @@ window.attachProgressBar = attachProgressBar;
 window.detachProgressBar = detachProgressBar;
 
 
-registerLicense(VITE_SYNCFUSION_LICENSE_KEY);
+registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
 
 onMounted(async () => {
   store = getMainStore();
