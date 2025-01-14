@@ -100,6 +100,11 @@ const handleFormatDetection = async (e) => {
   }
 };
 
+
+const handleProcessedTextures = async (e) => {
+  
+}
+
 const processCubeFaces = (e) => {
   logger.log("process cube faces");
 };

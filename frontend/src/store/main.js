@@ -14,6 +14,7 @@ export const useMainStore = defineStore('main', {
     isImmersiveSession: false,
     currentWorkingDirectory: "",
     progressValues: {},
+    processImagesInBrowserSetting: false,
     // Add other global state properties here
   }),
   actions: {

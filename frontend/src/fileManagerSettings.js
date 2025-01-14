@@ -1,14 +1,15 @@
 import { h } from 'vue';
 import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 export const ajaxSettings = {
-    url: "http://localhost:3000/api/filemanager/actions",
-    getImageUrl: "http://localhost:3000/api/filemanager/getImage",
-    uploadUrl: "http://localhost:3000/api/filemanager/upload",
-    downloadUrl: "http://localhost:3000/api/filemanager/download",
-    deleteUrl: "http://localhost:3000/api/filemanager/delete",
-    createFolderUrl: "http://localhost:3000/api/filemanager/create-folder",
-    saveUrl: "http://localhost:3000/api/filemanager/save",
+  url: `${apiBaseUrl}/api/filemanager/actions`,
+  getImageUrl: `${apiBaseUrl}/api/filemanager/getImage`,
+  uploadUrl: `${apiBaseUrl}/api/filemanager/upload`,
+  downloadUrl: `${apiBaseUrl}/api/filemanager/download`,
+  deleteUrl: `${apiBaseUrl}/api/filemanager/delete`,
+  createFolderUrl: `${apiBaseUrl}/api/filemanager/create-folder`,
+  saveUrl: `${apiBaseUrl}/api/filemanager/save`,
   };
   
   export const toolbarSettings = {
