@@ -53,7 +53,7 @@ import {
 // import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 import { registerLicense } from "@syncfusion/ej2-base";
 registerLicense(
-  "Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3THxbf1x1ZFFMYF5bQHFPIiBoS35Rc0ViWH1fdnRXQmdYUkZ+"  
+  "Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWX5fdHRcQ2heWEV0WUY="  
 );
 //"Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
 
@@ -161,7 +161,16 @@ const attachProgressBar = (target, id) => {
   });
 };
 
+const detachProgressBar = (target) => {
+  if (target.__vue_app__) {
+    target.__vue_app__.unmount();
+    delete target.__vue_app__;
+  }
+  target.remove();
+};
+
 window.attachProgressBar = attachProgressBar;
+window.detachProgressBar = detachProgressBar;
 
 onMounted(async () => {
   store = getMainStore();

@@ -3,6 +3,7 @@ import { updateImageFormat, getPresignedUrl } from "../services/apiService.js";
 import Logger from "../utils/logger.js";
 import axios from "axios";
 import { getMainStore } from "../store/main";
+import { remove } from "@syncfusion/ej2-base";
 const workerCount = 4;
 const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
@@ -79,6 +80,9 @@ const handleFormatDetection = async (e) => {
     const res = await axios.put(presignedUrlData.file.url, image.file, config);
     if (res.status >= 200 && res.status < 300) {
       logger.log("File uploaded successfully");
+      store.removeProgress(imageID);
+      detachProgressBar(progressElement);
+     
     } else {
       logger.error(`HTTP error! status: ${res.status}`);
     }

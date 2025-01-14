@@ -93,21 +93,6 @@ export const onSuccess = async (args, state) => {
   if (args.action === "read") {
     logger.log("read results non VR:", args.result);
 
-    // let uploadingImages = store.getProgressValues;
-
-    // logger.log("uploadingImages", uploadingImages);
-
-    // for (let key in uploadingImages) {
-    //   let uiElement = document.querySelector(`[data-image-id="${key}"]`);
-
-    //   if (uiElement) {
-    //     const progressElement = Array.from(
-    //       uiElement.querySelectorAll("[aria-label]")
-    //     ).find((el) => el.getAttribute("aria-label").includes("Progress"));
-
-    //     if (progressElement) attachProgressBar(progressElement, key);
-    //   }
-    // }
 
     for (let i = 0; i < args.result.files.length; i++) {
       const file = args.result.files[i];
@@ -134,20 +119,6 @@ export const onSuccess = async (args, state) => {
     // initializeProgressBars();
   }
 };
-
-// function initializeProgressBars(){
-//   console.log("Initializing progress bars");
-//   const progressBars = document.querySelectorAll('.progress-bar');
-//   progressBars.forEach((bar) => {
-//     const value = parseInt(bar.getAttribute('data-value'), 10);
-//     new EjsProgressbar({
-//       type: 'Linear',
-//       height: '20px',
-//       width: '100px',
-//       value,
-//     }).appendTo(bar);
-//   });
-// };
 
 export const onFileOpen = (args) => {};
 
@@ -196,13 +167,7 @@ export const onFileLoad = async (args) => {
     });
   }
 
-  // args.cancel = true;
-  // args = {  };
-  // // if (args.fileDetails.isFile) {
-  // //   if (args.element.childNodes.length > 5) {
-  // //     args.element.childNodes[5].classList.add("specialCase");
-  // //   }
-  // // }
+
 };
 
 const generateUniqueId = () => {

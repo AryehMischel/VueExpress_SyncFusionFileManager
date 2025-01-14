@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import isVRDevice from '../utils/vrUtils.js'; // Ensure this path is correct
 import { get } from 'jquery';
+import { remove } from '@syncfusion/ej2-base';
 
 
 let storeInstance;
@@ -42,6 +43,9 @@ export const useMainStore = defineStore('main', {
     updateProgress(id, value) {
       this.progressValues[id] = value;
     },
+    removeProgress(id) {
+      delete this.progressValues[id];
+    }
 
     // Add other actions here
   },
