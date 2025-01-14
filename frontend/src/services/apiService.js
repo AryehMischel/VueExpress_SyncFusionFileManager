@@ -75,7 +75,7 @@ export const getPresignedUrl = async (imageData) => {
 
 export const uploadFileInfo = async (fileInfo) => {
   try {
-    const response = await axios.post(`${apiBaseUrl}filemanager/upload`, fileInfo);
+    const response = await axios.post(`${apiBaseUrl}/filemanager/upload`, fileInfo);
     return response.data;
   } catch (error) {
     console.error("Error uploading file info:", error);
