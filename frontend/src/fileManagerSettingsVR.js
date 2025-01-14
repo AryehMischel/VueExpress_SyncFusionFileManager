@@ -102,15 +102,6 @@ export const ajaxSettings = {
 // };
 
 
-// const ajaxSettings = {
-//   url: "http://localhost:3000/api/filemanager/actions",
-//   getImageUrl: "http://localhost:3000/api/filemanager/getImage",
-//   uploadUrl: "http://localhost:3000/api/filemanager/upload",
-//   downloadUrl: "http://localhost:3000/api/filemanager/download",
-//   deleteUrl: "http://localhost:3000/api/filemanager/delete",
-//   createFolderUrl: "http://localhost:3000/api/filemanager/create-folder",
-//   saveUrl: "http://localhost:3000/api/filemanager/save",
-// };
 
 // const toolbarSettings = {
 //   items: [
