@@ -982,7 +982,7 @@ class CubeLayer {
         );
         lastSixUrls = null;
       } else {
-        if (store.isImmersiveSession && !this.layer) {
+        if (store.getImmersiveSession && !this.layer) {
           this.createXRLayer(glBinding, xrSpace);
         } else {
           const currentDirectory = store.currentWorkingDirectory;
@@ -995,6 +995,17 @@ class CubeLayer {
       }
       firstSixUrls = null;
     }
+
+    const element = document.querySelector(`[data-image-id="${this.id}"]`);
+    if (element) {
+      let ready = element.querySelector("#defaultSpan");
+      if (ready) {
+        ready.innerHTML = "✔️";
+      }
+    } else {
+      logger.warn("No element found with imageId:", this.id);
+    }
+
     this.loaded = true;
   }
 
@@ -1022,7 +1033,7 @@ class CubeLayer {
       });
 
       const facesData = await Promise.all(promises);
-      this.astcTextureData[0] = facesData.map(face => face.data);
+      this.astcTextureData[0] = facesData.map((face) => face.data);
 
       logger.log("Faces data:", facesData);
 
@@ -1073,7 +1084,7 @@ class CubeLayer {
       // Now you have the astcDataArray with the data in the order they were fetched
       this.astcTextureData[1] = astcDataArray;
 
-      if (store.isImmersiveSession && !this.layer) {
+      if (store.getImmersiveSession && !this.layer) {
         this.createXRLayer(glBinding, xrSpace);
       } else {
         const currentDirectory = store.currentWorkingDirectory;
@@ -1173,6 +1184,18 @@ class EquirectangularImage {
     } else if (this.format === "astc_4x4") {
       await this.loadAstcFile(this.srcArray, this.width, this.height);
     }
+
+    const element = document.querySelector(`[data-image-id="${this.id}"]`);
+    if (element) {
+      let ready = element.querySelector("#defaultSpan");
+      if (ready) {
+        ready.innerHTML = "✔️";
+      }
+    } else {
+      logger.warn("No element found with imageId:", this.id);
+    }
+
+
     this.loaded = true;
   }
 
@@ -1251,7 +1274,7 @@ class EquirectangularImage {
       compressedTexture.needsUpdate = true;
       this.compressedTexture = compressedTexture;
 
-      if (store.isImmersiveSession && !this.layer) {
+      if (store.getImmersiveSession && !this.layer) {
         this.createXRLayer(glBinding, xrSpace);
       } else {
         const currentDirectory = store.currentWorkingDirectory;
@@ -1308,9 +1331,15 @@ class ImageManager {
     if (this.images[name]) {
       this.currentImage = this.images[name];
 
-      if (store.isImmersiveSession && this.images[name].layer) {
+      console.log("is Immersive Session?", store.getImmersiveSession);
+      console.log("has Layer?", this.images[name].layer);
+
+      if (store.getImmersiveSession && this.images[name].layer) {
         if (!this.activeLayers.has(name)) {
           this.activeLayers.add(name);
+        }
+        if(scene.background){
+          scene.background = null;
         }
         setLayer(this.images[name].layer);
       } else {
@@ -1323,12 +1352,30 @@ class ImageManager {
 
   async createImageObjects(imageData) {
     if (imageData.groupId in this.images) {
-      if (store.isImmersiveSession && !this.images[imageData.groupId].layer) {
+
+      if (store.getImmersiveSession && !this.images[imageData.groupId].layer) {
+        console.log("creating layer for existing image");
         this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
       }
+
       logger.log("image already exists");
+
+      if(this.images[imageData.groupId].texture){
+        const element = document.querySelector(`[data-image-id="${imageData.groupId}"]`);
+        if (element) {
+          let ready = element.querySelector("#defaultSpan");
+          if (ready) {
+            ready.innerHTML = "✔️";
+          }
+        } else {
+          logger.warn("No element found with imageId:", imageData.groupId);
+        }
+      }
+
+      
       return;
-    }
+    } 
+
 
     // logger.log("creating image objects");
     if (imageData.format_360 === "equirectangular") {
@@ -1384,22 +1431,19 @@ class ImageManager {
 
   async processLayerQueue() {
     //check current image
-
-    if (this.currentImage) {
-      if (!this.currentImage.layer) {
-        await this.currentImage.createXRLayer(glBinding, xrSpace);
-        this.selectImage(this.currentImage.id);
-      }
-    }
+    console.log("creating layers via queue...");
+    // if (this.currentImage) {
+    //   if (!this.currentImage.layer) {
+    //     await this.currentImage.createXRLayer(glBinding, xrSpace);
+    //     // this.selectImage(this.currentImage.id);
+    //   }
+    // }
 
     //check all images in the queue
     let cwd = store.currentWorkingDirectory;
     let layersInCWD = this.XRlayerQueue[cwd];
 
     for (let i = 0; i < layersInCWD.length; i++) {
-      if (this.currentImage && layersInCWD[i] === this.currentImage.id) {
-        return;
-      }
       if (!this.images[layersInCWD[i]].layer) {
         this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
         this.activeLayers.add(layersInCWD[i]);

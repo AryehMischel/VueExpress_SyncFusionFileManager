@@ -31,6 +31,7 @@
 </script>  
 </head>
   <body>
+    <div id = "settings"></div>
     <div id="app" style="position: absolute;"></div>
     <script type="module" src="/src/main.js"></script>
     <script type="module" src="/src/ThreeScene.js"></script>
@@ -51,6 +52,7 @@ window.addEventListener('load', () => {
   }
 });
     const panel = $("#app").draggable();
+    console.log("panel", panel);
     const snapThreshold = 10; // pixels from edge to trigger snap
 
     panel.draggable({

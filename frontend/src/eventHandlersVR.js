@@ -1,16 +1,15 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
 import { processImage, addImage } from "./workers/workerManager.js";
 import { getMainStore } from "./store/main";
-import Logger from './utils/logger.js';
+import Logger from "./utils/logger.js";
 
-
-const logger = new Logger('VR_Events', true);
+const logger = new Logger("VR_Events", true);
 let store;
 
 export const onCreated = async (args) => {
   store = getMainStore();
   logger.log("on create for non VR", store.isVR);
-}
+};
 
 export const onBeforeSend = async (args, fileManagerRef) => {
   console.log("onBeforeSend VR");
@@ -82,9 +81,9 @@ export const onBeforeSend = async (args, fileManagerRef) => {
   if (args.action === "read") {
     // Example: Modify the request data
     if (args.ajaxSettings.data) {
-          const requestData = JSON.parse(args.ajaxSettings.data);
-          requestData.requestedFormat = "astc_4x4";
-          args.ajaxSettings.data = JSON.stringify(requestData);
+      const requestData = JSON.parse(args.ajaxSettings.data);
+      requestData.requestedFormat = "astc_4x4";
+      args.ajaxSettings.data = JSON.stringify(requestData);
     }
     // args.ajaxSettings.data = JSON.stringify({"message from frontend": "any message really"});
     // eventLogger.log("requesting images from server...");
@@ -94,21 +93,19 @@ export const onBeforeSend = async (args, fileManagerRef) => {
 export const onSuccess = async (args, state) => {
   if (args.action === "read") {
     logger.log("read results VR");
-
     for (let i = 0; i < args.result.files.length; i++) {
       const file = args.result.files[i];
+      
       if (file.isFile) {
-        logger.log("File loaded:", file);
-        if (file.processed) {
+        const hasTexture = imageManager.images?.[file.groupId]?.texture;
+    
+        if (!hasTexture && file.processed) {
           imageManager.createImageObjects(file);
-        } else {
-          //grey out unprocessed images
         }
       }
     }
 
     if (args.result && args.result.cwd && args.result.cwd.name) {
-      
       logger.log("current path", args.result.cwd.name);
       store.setWorkingDirectory(args.result.cwd.name);
       state.currentPath = args.result.cwd.name;
@@ -119,7 +116,6 @@ export const onSuccess = async (args, state) => {
 
     await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
     setBreadCrumb();
-
   }
 };
 
@@ -151,7 +147,6 @@ export const onBeforePopupOpen = (args) => {
   }
 };
 
-
 export const onFileLoad = async (args) => {
   await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
 
@@ -162,12 +157,22 @@ export const onFileLoad = async (args) => {
   rowGroup.appendChild(args.element);
 
   if (args.fileDetails.isFile) {
-      //html ui element
-      const targetElement = element.children[0]; 
+    args.element.setAttribute("data-image-id", args.fileDetails.groupId);
+    let hasTexture = imageManager.images?.[args.fileDetails.groupId]?.texture;
+    if(hasTexture){
+      const defaultSpan = args.element.querySelector("#defaultSpan");
+      if (defaultSpan) {
+        defaultSpan.innerHTML = "✔️";
+      } else {
+        console.warn("Element with id 'defaultSpan' not found");
+      }
+    }
 
 
-      element.addEventListener("click", (event) => {
+    //html ui element
+    const targetElement = element.children[0];
 
+    element.addEventListener("click", (event) => {
       imageManager.selectImage(`${args.fileDetails.groupId}`);
 
       // Create and dispatch mousedown event
@@ -190,8 +195,9 @@ export const onFileLoad = async (args) => {
       // Create and dispatch click event
       targetElement.click();
     });
-  } else { //folders
-    
+  } else {
+    //folders
+
     element.addEventListener("click", (event) => {
       const targetElement = element.children[0];
 

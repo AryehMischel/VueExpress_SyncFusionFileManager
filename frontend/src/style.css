@@ -63,6 +63,7 @@ button:focus-visible {
 }
 
 #app {
+  position: absolute;
   max-width: 1280px;
   min-width: 1000px;
   margin: 0;
@@ -71,6 +72,12 @@ button:focus-visible {
   min-height: 300px;
   /* text-align: center; */
 }
+#file-manager-container {
+  border-radius: 8px;
+  background-color: #1a1a1a;
+  color: #ffffff;
+}
+
 
 @media (prefers-color-scheme: light) {
   :root {

@@ -20,15 +20,6 @@
         @fileLoad="(args) => eventHandlers.onFileLoad(args)"
         @created="(args) => eventHandlers.onCreated(args)"
       ></ejs-filemanager>
-      <div class="progress-bar-container">
-      <ejs-progressbar
-        id="test-progress-bar"
-        :type="'Linear'"
-        :height="'20px'"
-        :width="'100px'"
-        :value="50"
-      ></ejs-progressbar>
-    </div>
     <div id="dynamic-container"></div>
     </div>
     <div v-else>
@@ -42,6 +33,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted, provide, nextTick } from "vue";
+
 import { createApp, h } from 'vue';
 import {
   FileManagerComponent as EjsFilemanager,
@@ -53,9 +45,6 @@ import {
 // import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 import { registerLicense } from "@syncfusion/ej2-base";
 import { ProgressBarComponent as EjsProgressbar, ProgressBarPlugin } from "@syncfusion/ej2-vue-progressbar";
-
-//"Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
- 
 import { createWebWorkers } from "./workers/workerManager.js";
 import { getMainStore } from './store/main';
 import * as nonVREventHandlers from "./eventHandlers.js";
@@ -76,6 +65,17 @@ import { logger } from "sequelize/lib/utils/logger";
 const fileManagerRef = ref(null);
 const isInitialized = ref(false);
 
+const appState = ref('Ready'); 
+const ready = ref('ReadyOrNot'); 
+const testRef = ref("sekjhglskdjfhglskdjfhg");
+const testState = reactive({
+  test: "test",
+  test2: "test2",
+});
+
+
+
+
 const state = reactive({
   ajaxSettings: {},
   contextMenuSettings: {},
@@ -89,8 +89,6 @@ const state = reactive({
 provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
 let store;
 
-
-
 const initializeApp = async () => {
   // await new Promise(resolve => setTimeout(resolve, 2000));
   state.ajaxSettings = ajaxSettings;
@@ -101,22 +99,6 @@ const initializeApp = async () => {
   await store.checkVRDevice();
   isInitialized.value = true;
 };
-
-function initializeProgressBars(){
-  console.log("Initializing progress bars");
-  const progressBars = document.querySelectorAll('.progress-bar');
-  progressBars.forEach((bar) => {
-    console.log("bar: ", bar);
-    // const value = parseInt(bar.getAttribute('data-value'), 10);
-    // new EjsProgressbar({
-    //   type: 'Linear',
-    //   height: '20px',
-    //   width: '100px',
-    //   value: 20,
-    // }).appendTo(bar);
-  });
-};
-
 
 const attachProgressBar = (target, id) => {
   nextTick(() => {
@@ -157,17 +139,14 @@ onMounted(async () => {
   createWebWorkers();
   const fileManagerInstance = fileManagerRef.value?.ej2Instances;
   window.fileManagerInstance = fileManagerInstance;
-  initializeProgressBars();
   if (fileManagerInstance) {
 
     window.refreshFileManager = () => {
       fileManagerInstance.refreshFiles();
-      initializeProgressBars();
 
     };
     window.refreshLayout = () => {
       fileManagerInstance.refreshLayout();
-      initializeProgressBars();
     };
     window.getSelectedUI = () => {
       let selectedObj = fileManagerInstance.getSelectedFiles();
@@ -213,8 +192,14 @@ const fileManagerSettings = computed(() => {
     };
   }
 });
+
+const updateReadyState = () => {
+  ready.value = 'Updated Ready State';
+};
 </script>
 
 <style>
-@import "https://cdn.syncfusion.com/ej2/27.1.48/fabric-dark.css";</style>
+@import "https://cdn.syncfusion.com/ej2/27.1.48/fabric-dark.css";
+
+</style>
 

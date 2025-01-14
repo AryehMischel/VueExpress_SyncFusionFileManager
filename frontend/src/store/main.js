@@ -15,6 +15,7 @@ export const useMainStore = defineStore('main', {
     currentWorkingDirectory: "",
     progressValues: {},
     processImagesInBrowserSetting: false,
+    processClientSide: false,
     // Add other global state properties here
   }),
   actions: {
@@ -44,6 +45,9 @@ export const useMainStore = defineStore('main', {
     },
     removeProgress(id) {
       delete this.progressValues[id];
+    }, 
+    setProcessClientSide(value) {
+      this.processClientSide = value;
     }
 
     // Add other actions here
@@ -59,6 +63,7 @@ export const useMainStore = defineStore('main', {
     isFileLoading: (state) => (id) => {
       return state.progressValues[id] > 0 && state.progressValues[id] < 100;
     },
+    getProcessClientSide: (state) => state.processClientSide,
    
     // Add other getters here
   }

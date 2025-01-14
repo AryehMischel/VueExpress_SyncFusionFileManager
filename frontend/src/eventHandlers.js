@@ -97,9 +97,12 @@ export const onSuccess = async (args, state) => {
     for (let i = 0; i < args.result.files.length; i++) {
       const file = args.result.files[i];
       if (file.isFile) {
-        logger.log("File loaded:", file);
         if (file.processed) {
-          imageManager.createImageObjects(file);
+          if(imageManager.images?.[file.groupId]?.texture){
+            logger.log("has texture, but not yet processed")
+          }else{
+            imageManager.createImageObjects(file);
+          }
         } else {
           //grey out unprocessed images
         }
@@ -160,13 +163,25 @@ export const onFileLoad = async (args) => {
           attachProgressBar(progressElement, args.fileDetails.groupId);
       }
     }
+
+
+   let hasTexture = imageManager.images?.[args.fileDetails.groupId]?.texture;
+   let hasCompressedTexture = imageManager.images?.[args.fileDetails.groupId]?.compressedTexture;
+    if(hasTexture){
+      const defaultSpan = args.element.querySelector("#defaultSpan");
+      if (defaultSpan) {
+        defaultSpan.innerHTML = "✔️";
+      } else {
+        console.warn("Element with id 'defaultSpan' not found");
+      }
+    }
+
     logger.log("File loaded:", args);
     args.element.setAttribute("data-image-id", args.fileDetails.groupId);
     args.element.addEventListener("click", () => {
       imageManager.selectImage(`${args.fileDetails.groupId}`);
     });
   }
-
 
 };
 

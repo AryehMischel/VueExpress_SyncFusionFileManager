@@ -55,16 +55,13 @@ export const ajaxSettings = {
         field: "name",
         headerText: "Name",
         customAttributes: { class: "e-fe-grid-name" },
-      },
-      {
-        field: "_fm_modified",
-        headerText: "DateModified",
-        format: "MM/dd/yyyy hh:mm a",
+        width: "110",
       },
       {
         field: "size",
         headerText: "Size",
         template: '<span class="e-fe-size">${size}</span>',
+        width: "40",
         format: "n2",
       },
       {
@@ -72,17 +69,25 @@ export const ajaxSettings = {
         headerText: "360 Format",
         template: '<span class="e-fe-size">${format_360}</span>',
         format: "n2",
-
+        width: "90",
       },
       {
         field: "processed",
         headerText: "Processed",
         template: '<span>${processed}</span>',
+        width: "90",
+      },
+      {
+        field: "ready",
+        headerText: "Ready",
+        template: '<span id="defaultSpan" > ... </span>', // Use Vue interpolation
+        width: "90",
       },
       {
         field: "progress",
         headerText: "Progress",
         template: '<div id="progress-${_id}" class="progress-bar" data-value="50"></div>',
+        width: "90",
       },
       
     ],
