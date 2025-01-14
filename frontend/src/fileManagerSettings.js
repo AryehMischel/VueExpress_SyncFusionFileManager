@@ -1,5 +1,4 @@
 import { h } from 'vue';
-import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 export const ajaxSettings = {

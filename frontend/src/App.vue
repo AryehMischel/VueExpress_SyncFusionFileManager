@@ -52,16 +52,15 @@ import {
 
 // import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 import { registerLicense } from "@syncfusion/ej2-base";
-registerLicense(
-  "Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf1FpRmJGdld5fUVHYVZUTXxaS00DNHVRdkdmWX5fdHRcQ2heWEV0WUY="  
-);
-//"Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
+import { ProgressBarComponent as EjsProgressbar, ProgressBarPlugin } from "@syncfusion/ej2-vue-progressbar";
 
+//"Ngo9BigBOggjHTQxAR8/V1NMaF5cXmBCf0x3TXxbf1x1ZFREal1STnNfUj0eQnxTdEFiW35XcXZURWVZUUB0Ww=="
+ 
 import { createWebWorkers } from "./workers/workerManager.js";
 import { getMainStore } from './store/main';
 import * as nonVREventHandlers from "./eventHandlers.js";
 import * as VREventHandlers from "./eventHandlersVR.js";
-import { ProgressBarComponent as EjsProgressbar, ProgressBarPlugin } from "@syncfusion/ej2-vue-progressbar";
+
 import {
   ajaxSettings,
   toolbarSettings,
@@ -118,30 +117,6 @@ function initializeProgressBars(){
   });
 };
 
-// const addNewElement = () => {
-//   const container = document.getElementById('dynamic-container');
-//   const newElement = document.createElement('div');
-//   newElement.className = 'progress-bar-target'; // Class to filter
-//   newElement.setAttribute('data-progress-value', Math.floor(Math.random() * 100));
-//   container.appendChild(newElement);
-// };
-
-// const observeDynamicElements = () => {
-//   const observer = new MutationObserver((mutations) => {
-//     mutations.forEach((mutation) => {
-//       mutation.addedNodes.forEach((node) => {
-//         if (node.classList && node.classList.contains('progress-bar-target')) {
-//           attachProgressBar(node);
-//         }
-//       });
-//     });
-//   });
-
-//   observer.observe(document.getElementById('dynamic-container'), {
-//     childList: true,
-//     subtree: false,
-//   });
-// };
 
 const attachProgressBar = (target, id) => {
   nextTick(() => {
@@ -171,6 +146,9 @@ const detachProgressBar = (target) => {
 
 window.attachProgressBar = attachProgressBar;
 window.detachProgressBar = detachProgressBar;
+
+
+registerLicense(VITE_SYNCFUSION_LICENSE_KEY);
 
 onMounted(async () => {
   store = getMainStore();

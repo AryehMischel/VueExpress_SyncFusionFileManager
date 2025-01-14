@@ -14,8 +14,6 @@
     "preview": "npm --prefix frontend run preview"
   },
   "dependencies": {
-    "@syncfusion/ej2-base": "^28.1.33",
-    "@syncfusion/ej2-vue-filemanager": "^28.1.33",
     "aws-sdk": "^2.1692.0",
     "axios": "^1.7.9",
     "body-parser": "^1.20.3",

@@ -3,7 +3,6 @@ import { updateImageFormat, getPresignedUrl } from "../services/apiService.js";
 import Logger from "../utils/logger.js";
 import axios from "axios";
 import { getMainStore } from "../store/main";
-import { remove } from "@syncfusion/ej2-base";
 const workerCount = 4;
 const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
