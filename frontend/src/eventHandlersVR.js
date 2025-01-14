@@ -160,7 +160,8 @@ export const onFileLoad = async (args) => {
   if (args.fileDetails.isFile) {
     args.element.setAttribute("data-image-id", args.fileDetails.groupId);
     let hasTexture = imageManager.images?.[args.fileDetails.groupId]?.texture;
-    if(hasTexture){
+    let hasCompressedTexture = imageManager.images?.[args.fileDetails.groupId]?.compressedTexture;
+    if(hasTexture || hasCompressedTexture){
       const defaultSpan = args.element.querySelector("#defaultSpan");
       if (defaultSpan) {
         defaultSpan.innerHTML = "✔️";
