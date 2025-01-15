@@ -9,52 +9,12 @@ const _event = { type: '', data: _pointer };
 
 const _raycaster = new Raycaster();
 
+
+
+
 class InteractiveGroup extends Group {
 
 	listenToPointerEvents( renderer, camera ) {
-
-		const scope = this;
-		const raycaster = new Raycaster();
-
-		const element = renderer.domElement;
-
-		function onPointerEvent( event ) {
-
-			event.stopPropagation();
-
-			const rect = renderer.domElement.getBoundingClientRect();
-
-			_pointer.x = ( event.clientX - rect.left ) / rect.width * 2 - 1;
-			_pointer.y = - ( event.clientY - rect.top ) / rect.height * 2 + 1;
-
-			raycaster.setFromCamera( _pointer, camera );
-
-			const intersects = raycaster.intersectObjects( scope.children, false );
-
-			if ( intersects.length > 0 ) {
-
-				const intersection = intersects[ 0 ];
-
-				const object = intersection.object;
-				const uv = intersection.uv;
-
-				_event.type = event.type;
-				_event.data.set( uv.x, 1 - uv.y );
-
-				object.dispatchEvent( _event );
-
-			}
-
-		}
-
-		element.addEventListener( 'pointerdown', onPointerEvent );
-		element.addEventListener( 'pointerup', onPointerEvent );
-		element.addEventListener( 'pointermove', onPointerEvent );
-		element.addEventListener( 'mousedown', onPointerEvent );
-		element.addEventListener( 'mouseup', onPointerEvent );
-		element.addEventListener( 'mousemove', onPointerEvent );
-		element.addEventListener( 'click', onPointerEvent );
-
 	}
 
 	listenToXRControllerEvents( controller ) {
@@ -70,9 +30,9 @@ class InteractiveGroup extends Group {
 			'selectend': 'mouseup'
 		};
 
+		
 
 		function onXRControllerEvent( event ) {
-			// console.log("pointer event")
 
 			const controller = event.target;
 
@@ -81,7 +41,6 @@ class InteractiveGroup extends Group {
 			const intersections = _raycaster.intersectObjects( scope.children, false );
 
 			if ( intersections.length > 0 ) {
-				
 
 				const intersection = intersections[ 0 ];
 
@@ -93,6 +52,13 @@ class InteractiveGroup extends Group {
 
 				object.dispatchEvent( _event );
 
+			} else{
+				console.log("no interactions")
+				if(GlobalHighlight){
+					console.log("unlighting")
+					GlobalHighlight = false;
+					GLOBALunlight();
+				}
 			}
 
 		}

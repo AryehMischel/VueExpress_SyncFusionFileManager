@@ -8,11 +8,14 @@ import {
   Mesh,
   BoxGeometry,
   SphereGeometry,
+  CylinderGeometry,
   CanvasTexture,
   EquirectangularReflectionMapping,
   PerspectiveCamera,
   HemisphereLight,
+  AmbientLight,
   DirectionalLight,
+  PointLight,
   WebGLRenderer,
   Color,
   BufferGeometry,
@@ -28,21 +31,20 @@ import {
   CubeTextureLoader,
   LinearMipmapLinearFilter,
 } from "three";
+import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import Stats from "three/examples/jsm/libs/stats.module.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { VRButton } from "three/examples/jsm/webxr/VRButton.js";
 import { GUI } from "three/examples/jsm/libs/lil-gui.module.min.js";
 import { HTMLMesh } from "three/examples/jsm/interactive/HTMLMesh.js";
-import { InteractiveGroup } from "three/examples/jsm/interactive/InteractiveGroup.js";
+import { InteractiveGroup } from "./jsm/interactive/InteractiveGroup.js";
 import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
 import { XRHandModelFactory } from "three/examples/jsm/webxr/XRHandModelFactory.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import Logger from "./utils/logger";
-import ThreeMeshUI from "https://cdn.skypack.dev/three-mesh-ui";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 import { getMainStore } from "./store/main";
-import { log } from "three/src/nodes/TSL.js";
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
 
 let scene,
   camera,
@@ -57,6 +59,11 @@ let scene,
   xrSession;
 let vrMode = false;
 window.vrMode = vrMode;
+
+let IShighlighted = false;
+
+
+window.GlobalHighlight = IShighlighted;
 
 //vr ui stuff
 let vrui;
@@ -145,6 +152,18 @@ group = new InteractiveGroup();
 group.listenToXRControllerEvents(controllers[0]);
 group.listenToXRControllerEvents(controllers[1]);
 scene.add(group);
+
+// controllers[0].addEventListener('selectstart', onSelectStart);
+// controllers[1].addEventListener('selectend', onSelectEnd);
+
+// controllers[0].addEventListener('selectstart', onSelectStart);
+// controllers[1].addEventListener('selectend', onSelectEnd);
+
+function onSelectStart(event) {
+  const controller = event.target;
+  console.log("Select start", controller);
+  // Add your custom logic here
+}
 
 //create ktx2loader (slightly modified threejs 0.169.0 ktx2loader)
 ktx2Loader = new KTX2Loader();
@@ -653,9 +672,26 @@ function customSkyCamera() {
 }
 
 function setupScene(scene) {
-  const hemLight = new HemisphereLight(0x808080, 0x606060, 3);
-  const light = new DirectionalLight(0xffffff, 3);
-  scene.add(hemLight, light);
+  const hemLight = new HemisphereLight(0x808080, 0x606060, 4);
+  const dirLight = new DirectionalLight(0xffffff, 4);
+  dirLight.position.set(5, 10, 7.5);
+  dirLight.castShadow = true;
+
+  const pointLight = new PointLight(0xffffff, 1, 100);
+  pointLight.position.set(2, 3, 2);
+  pointLight.castShadow = true;
+
+  const ambientLight = new AmbientLight(0x404040, 3); // Add ambient light
+
+  window.ambientLight = ambientLight;
+  window.pointLight = pointLight;
+  window.dirLight = dirLight;
+  window.hemLight = hemLight;
+
+  scene.add(hemLight);
+  scene.add(dirLight);
+  scene.add(pointLight);
+  scene.add(ambientLight); // Add ambient light to the scene
 }
 
 function customRenderer() {
@@ -1196,7 +1232,6 @@ class EquirectangularImage {
       logger.warn("No element found with imageId:", this.id);
     }
 
-
     this.loaded = true;
   }
 
@@ -1328,7 +1363,7 @@ class ImageManager {
   }
 
   selectNextImage() {
-    if(this.imageOrder.length === 0){
+    if (this.imageOrder.length === 0) {
       return;
     }
     if (this.currentImageIndex < this.imageOrder.length - 1) {
@@ -1340,11 +1375,10 @@ class ImageManager {
     console.log("current image index", this.currentImageIndex);
     console.log("curr image", this.imageOrder[this.currentImageIndex]);
     this.selectImage(this.imageOrder[this.currentImageIndex]);
-
   }
 
-  selectPreviousImage(){
-    if(this.imageOrder.length === 0){
+  selectPreviousImage() {
+    if (this.imageOrder.length === 0) {
       return;
     }
     if (this.currentImageIndex > 0) {
@@ -1353,10 +1387,8 @@ class ImageManager {
       this.currentImageIndex = this.imageOrder.length - 1;
     }
     this.selectImage(this.imageOrder[this.currentImageIndex]);
-
   }
 
-  
   removeImage(name) {
     delete this.images[name];
   }
@@ -1372,7 +1404,7 @@ class ImageManager {
         if (!this.activeLayers.has(name)) {
           this.activeLayers.add(name);
         }
-        if(scene.background){
+        if (scene.background) {
           logger.log("removing scene background");
           scene.background = null;
         }
@@ -1387,7 +1419,6 @@ class ImageManager {
 
   async createImageObjects(imageData) {
     if (imageData.groupId in this.images) {
-
       if (store.getImmersiveSession && !this.images[imageData.groupId].layer) {
         console.log("creating layer for existing image");
         this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
@@ -1395,8 +1426,10 @@ class ImageManager {
 
       logger.log("image already exists");
 
-      if(this.images[imageData.groupId].texture){
-        const element = document.querySelector(`[data-image-id="${imageData.groupId}"]`);
+      if (this.images[imageData.groupId].texture) {
+        const element = document.querySelector(
+          `[data-image-id="${imageData.groupId}"]`
+        );
         if (element) {
           let ready = element.querySelector("#defaultSpan");
           if (ready) {
@@ -1407,10 +1440,8 @@ class ImageManager {
         }
       }
 
-      
       return;
-    } 
-
+    }
 
     // logger.log("creating image objects");
     if (imageData.format_360 === "equirectangular") {
@@ -1844,8 +1875,261 @@ function requestImmersiveSession() {}
 
 function createXRLayerBeforeVRMode() {}
 
+const loader = new GLTFLoader();
+let animatedPath = "https://d368ik34cg55zg.cloudfront.net/sample.glb";
 
-function loadInArrows(){
-  let gltfLoader = new GLTFLoader();
+let arrowBaseMaterial;
+let arrowNode;
+let arrowHighlighted = false;
+
+
+
+function unhighlight(){
+  console.log("unhighlighting");
+  highlightArrow(false);
+}
+
+window.GLOBALunlight = unhighlight;
+
+function loadInArrows() {
+  loader.load(
+    animatedPath,
+    function (gltf) {
+      // Add a cylinder mesh for interactions
+      const cylinderGeometry = new CylinderGeometry(0.5, 0.5, 2, 32);
+      const cylinderMaterial = new MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
+      });
+
+      const interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh1.position.set(0, 0, -2);
+      interactionMesh1.userData.interactive = true; // Mark as interactive
+      group.add(interactionMesh1);
+
+      const interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh2.position.set(2, 0, -2);
+      interactionMesh2.userData.interactive = true; // Mark as interactive
+      group.add(interactionMesh2);
+
+      // Clone the model and add it as a child of the interaction mesh
+      const model1 = gltf.scene.clone();
+      model1.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
+      model1.rotation.z = -(Math.PI / 2);
+      interactionMesh1.add(model1);
+
+      const model2 = gltf.scene.clone();
+      model2.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
+      model2.rotation.z = Math.PI / 2;
+      interactionMesh2.add(model2);
+
+      model1.traverse((child) => {
+        if (child.isMesh) {
+          console.log("Mesh:", child);
+          console.log("Materials:", child.material);
+          arrowNode = child;
+          let clonedMaterial = child.material.clone();
+          arrowBaseMaterial = clonedMaterial;
+        }
+      });
+
+
+      // hoveron: { data: Vector2 };
+      // pointerdown: { data: Vector2 };
+      // pointerup: { data: Vector2 };
+      // pointermove: { data: Vector2 };
+      // mousedown: { data: Vector2 };
+      // mouseup: { data: Vector2 };
+      // mousemove: { data: Vector2 };
+      // click: { data: Vector2 };
+
+      // Add event listeners to the interaction meshes
+      interactionMesh1.addEventListener("click", () => {
+        console.log("clicked on model1 mesh");
+      });
+      interactionMesh1.addEventListener("hoveron", () => {
+        console.log("hovered on model1 mesh");
+      });
+      interactionMesh1.addEventListener("hoveroff", () => {
+        console.log("hovered off model1 mesh");
+      });
+      interactionMesh1.addEventListener("selectstart", () => {
+        console.log("selectstart on model1 mesh");
+      });
+      interactionMesh1.addEventListener("selectend", () => {
+        console.log("selectend on model1 mesh");
+      });
+      interactionMesh1.addEventListener("pointerup", () => {
+        console.log("pointerup on model1 mesh");
+      });
+      interactionMesh1.addEventListener("pointermove", () => {
+        console.log("pointermove on model1 mesh");
+      });
+      
+      interactionMesh1.addEventListener("mousedown", () => {
+        console.log("mousedown on model1 mesh");
+      });
+            
+      interactionMesh1.addEventListener("mouseup", () => {
+        console.log("mouseup on model1 mesh");
+      });
+
+
+      interactionMesh1.addEventListener("mousemove", () => {
+        if(!GlobalHighlight){
+          console.log("highlighting arrow")
+          highlightArrow(true);
+          GlobalHighlight = true;
+        }
+          
+      });
+
+
+      interactionMesh2.addEventListener("click", () => {
+        console.log("clicked on model2 mesh");
+      });
+      interactionMesh2.addEventListener("hoveron", () => {
+        console.log("hovered on model2 mesh");
+      });
+      interactionMesh2.addEventListener("hoveroff", () => {
+        console.log("hovered off model2 mesh");
+      });
+      interactionMesh2.addEventListener("selectstart", () => {
+        console.log("selectstart on model2 mesh");
+      });
+      interactionMesh2.addEventListener("selectend", () => {
+        console.log("selectend on model2 mesh");
+      });
+
+      interactionMesh2.addEventListener("pointerup", () => {
+        console.log("pointerup on model1 mesh");
+      });
+      interactionMesh2.addEventListener("pointermove", () => {
+        console.log("pointermove on model1 mesh");
+      });
+      
+      interactionMesh2.addEventListener("mousedown", () => {
+        console.log("mousedown on model1 mesh");
+      });
+            
+      interactionMesh2.addEventListener("mouseup", () => {
+        console.log("mouseup on model1 mesh");
+      });
+
+
+      interactionMesh2.addEventListener("mousemove", () => {
+        console.log("mouse moving over mesh");
+      });
+
+      // Simulate events for testing
+      // setTimeout(() => {
+      //   interactionMesh1.dispatchEvent({ type: "click" });
+      //   interactionMesh1.dispatchEvent({ type: "hoveron" });
+      //   interactionMesh1.dispatchEvent({ type: "hoveroff" });
+      //   interactionMesh1.dispatchEvent({ type: "selectstart" });
+      //   interactionMesh1.dispatchEvent({ type: "selectend" });
+      //   interactionMesh2.dispatchEvent({ type: "click" });
+      //   interactionMesh2.dispatchEvent({ type: "hoveron" });
+      //   interactionMesh2.dispatchEvent({ type: "hoveroff" });
+      //   interactionMesh2.dispatchEvent({ type: "selectstart" });
+      //   interactionMesh2.dispatchEvent({ type: "selectend" });
+      // }, 1000); // Delay to ensure models are added to the scene
+
+      
+      createCustomMaterial();
+    },
+    undefined,
+    function (error) {
+      console.error("An error occurred while loading the GLTF file:", error);
+    }
+  );
+
 
 }
+
+function addInteractiveBox() {
+  let geometry = new BoxGeometry(1, 1, 1);
+  let material = new MeshBasicMaterial({ color: 0x00ff00 });
+  let cube = new Mesh(geometry, material);
+  cube.position.set(0, 0, -3);
+  cube.name = "interactiveCube";
+  group.add(cube);
+  cube.addEventListener("click", () => {
+    console.log("clicked on cube");
+  });
+
+  cube.addEventListener("hoveron", () => {
+    console.log("hovered on cube");
+  });
+
+  cube.addEventListener("hoveroff", () => {
+    console.log("hovered off cube");
+  });
+
+  cube.addEventListener("selectstart", () => {
+    console.log("selectstart on cube");
+  });
+
+  cube.addEventListener("selectend", () => {
+    console.log("selectend on cube");
+  });
+}
+
+window.addbox = addInteractiveBox;
+window.loadInArrows = loadInArrows;
+
+function createCustomMaterial() {
+  let arrowShader = new CustomShaderMaterial({
+    baseMaterial: arrowBaseMaterial,
+    uniforms: {
+      highlighted: { value: false }, // Add a uniform for highlighting
+      edgeColor: { value: new Color(1, 0.27, 0.63) }, // Add a uniform for the color
+    },
+
+    vertexShader: vs,
+    fragmentShader: fs,
+  });
+
+  arrowNode.material = arrowShader;
+
+}
+
+
+function highlightArrow(value) {
+  arrowNode.material.uniforms.highlighted.value = value;
+}
+
+
+
+window.highlightArrow = highlightArrow;
+
+window.createCustomMaterial = createCustomMaterial;
+
+let vs = `
+  varying vec2 vUv;
+      uniform float brightness;
+  void main() {
+      vUv = uv;
+  }
+`;
+
+let fs = `
+  varying vec2 vUv;
+  uniform bool highlighted;
+
+      void main() {
+
+      if(highlighted){
+       
+      if(csm_FragColor.g > 0.5){
+        csm_FragColor = vec4(csm_FragColor.r, csm_FragColor.g, csm_FragColor.b, 1.0);
+      }else{
+         csm_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }
+    }else{
+    
+    csm_FragColor = csm_FragColor;
+    }
+       csm_UnlitFac =  csm_UnlitFac;
+  }
+`;

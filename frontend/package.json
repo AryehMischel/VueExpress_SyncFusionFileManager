@@ -19,7 +19,8 @@
     "axios": "^1.7.9",
     "dotenv": "^16.4.7",
     "pinia": "^2.3.0",
-    "three": "^0.169.0",
+    "three": "^0.170.0",
+    "three-custom-shader-material": "^6.1.1",
     "vue": "^3.5.13",
     "vueexpress-syncfusionfilemanager": "file:.."
   },
