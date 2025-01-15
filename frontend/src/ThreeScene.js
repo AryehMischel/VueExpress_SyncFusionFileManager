@@ -42,6 +42,7 @@ import ThreeMeshUI from "https://cdn.skypack.dev/three-mesh-ui";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 import { getMainStore } from "./store/main";
 import { log } from "three/src/nodes/TSL.js";
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 let scene,
   camera,
@@ -1312,6 +1313,8 @@ class ImageManager {
       return ImageManager.instance;
     }
     this.images = {};
+    this.imageOrder = []; // purely placeholder code for implementing demo. Order will have to track with syncfusion order by data
+    this.currentImageIndex = 0;
     this.activeLayers = new Set();
     this.currentImage = null;
     this.XRlayerQueue = { "/": [] }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
@@ -1320,9 +1323,40 @@ class ImageManager {
 
   addImage(name, imageInstance) {
     this.images[name] = imageInstance;
+    this.imageOrder.push(name);
     downloadManager.addToQueue(imageInstance);
   }
 
+  selectNextImage() {
+    if(this.imageOrder.length === 0){
+      return;
+    }
+    if (this.currentImageIndex < this.imageOrder.length - 1) {
+      this.currentImageIndex++;
+    } else {
+      this.currentImageIndex = 0;
+    }
+
+    console.log("current image index", this.currentImageIndex);
+    console.log("curr image", this.imageOrder[this.currentImageIndex]);
+    this.selectImage(this.imageOrder[this.currentImageIndex]);
+
+  }
+
+  selectPreviousImage(){
+    if(this.imageOrder.length === 0){
+      return;
+    }
+    if (this.currentImageIndex > 0) {
+      this.currentImageIndex--;
+    } else {
+      this.currentImageIndex = this.imageOrder.length - 1;
+    }
+    this.selectImage(this.imageOrder[this.currentImageIndex]);
+
+  }
+
+  
   removeImage(name) {
     delete this.images[name];
   }
@@ -1809,3 +1843,9 @@ window.loadCompressedEqrt = loadCompressedEqrt;
 function requestImmersiveSession() {}
 
 function createXRLayerBeforeVRMode() {}
+
+
+function loadInArrows(){
+  let gltfLoader = new GLTFLoader();
+
+}

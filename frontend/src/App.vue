@@ -6,12 +6,13 @@
         ref="fileManagerRef"
         :ajaxSettings="ajaxSettings"
         :contextMenuSettings="contextMenuSettings"
-        :toolbarSettings="toolbarSettings"
+        :toolbarSettings="state.toolbarSettings"
         :view="view"
         :breadcrumbBarSettings="breadcrumbBarSettings"
-        :detailsViewSettings="detailsViewSettings"
+        :detailsViewSettings="state.detailsViewSettings"
         :allowDragAndDrop="true"
         :uploadSettings="uploadSettings"
+        @toolbarClick="(args) => onToolbarClick(args)"
         @fileOpen="(args) => eventHandlers.onFileOpen(args)"
         @beforeSend="(args) => eventHandlers.onBeforeSend(args, fileManagerRef)"
         @success="(args) => eventHandlers.onSuccess(args, state)"
@@ -59,6 +60,11 @@ import {
   breadcrumbBarSettings,
   uploadSettings,
 } from "./fileManagerSettings.js";
+
+import {
+  detailsViewSettings as detailsViewSettingsVR,
+  toolbarSettings as toolbarSettingsVR,
+} from "./fileManagerSettingsVR.js";
 import { logger } from "sequelize/lib/utils/logger";
 
 
@@ -74,7 +80,14 @@ const testState = reactive({
 });
 
 
-
+const onToolbarClick = (args) => {
+  console.log(args);
+  if (args.item.properties.text === 'customButton') {
+    // Custom action logic here
+    console.log('Custom button clicked');
+    // Add your custom method logic here
+  }
+};
 
 const state = reactive({
   ajaxSettings: {},
@@ -94,9 +107,24 @@ const initializeApp = async () => {
   state.ajaxSettings = ajaxSettings;
   state.contextMenuSettings = contextMenuSettings;
   state.breadcrumbBarSettings = breadcrumbBarSettings;
-  state.detailsViewSettings = detailsViewSettings;
   state.uploadSettings = uploadSettings;
   await store.checkVRDevice();
+
+  //get vr state
+  let vrState = store.getIsVR;
+  console.log(`VR state: ${vrState}`);
+  if(vrState){
+    state.detailsViewSettings = detailsViewSettingsVR;
+    state.toolbarSettings = toolbarSettingsVR
+  }else{
+    state.detailsViewSettings = detailsViewSettings;
+    state.toolbarSettings = toolbarSettings
+
+  }
+  //set display vioew
+
+  // state.detailsViewSettings = detailsViewSettings;
+
   isInitialized.value = true;
 };
 
@@ -200,6 +228,20 @@ const updateReadyState = () => {
 
 <style>
 @import "https://cdn.syncfusion.com/ej2/27.1.48/fabric-dark.css";
+
+
+/* Override Syncfusion styles */
+.e-grid .e-gridheader {
+    background-color: #dc0000;
+    color: #fff;
+    border-bottom-color: #785dc8;
+    border-top-color: #785dc8;
+}
+
+/* Make the grid semi-transparent */
+.e-grid {
+    opacity: 0.8; /* Adjust the opacity value as needed */
+}
 
 </style>
 

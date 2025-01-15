@@ -12,20 +12,9 @@ export const ajaxSettings = {
   };
   
   export const toolbarSettings = {
-    visible: false,
+    visible: true,
     items: [
-      "NewFolder",
-      "SortBy",
-      "Cut",
-      "Copy",
-      "Paste",
-      "Delete",
-      "Refresh",
-      "Download",
-      "Rename",
-      "Selection",
-      "View",
-      "Details",
+      "shrink ui",
     ],
   };
   
@@ -37,8 +26,6 @@ export const ajaxSettings = {
       "Refresh",
       "|",
       "Paste",
-      "|",
-      "NewFolder",
       "|",
       "Details",
       "|",
@@ -52,7 +39,7 @@ export const ajaxSettings = {
   export const detailsViewSettings = {
     columns: [
       {
-        field: "name",
+        field: "name_",
         headerText: "Name",
         customAttributes: { class: "e-fe-grid-name" },
         width: "110",
@@ -66,7 +53,7 @@ export const ajaxSettings = {
       },
       {
         field: "format_360",
-        headerText: "360 Format",
+        headerText: "360 Format_",
         template: '<span class="e-fe-size">${format_360}</span>',
         format: "n2",
         width: "90",

@@ -23,8 +23,6 @@ export const useMainStore = defineStore('main', {
       this.isVR = vrCheck;
     },
     checkVRDevice() {
-        // this.count++;
-        //console.log('this in checkVRDevice:', this);
         const check = isVRDevice();
         this.setVRMode(check); // Use the action to set the state
     },
