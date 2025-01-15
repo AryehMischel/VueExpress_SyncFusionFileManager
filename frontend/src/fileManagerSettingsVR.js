@@ -12,7 +12,7 @@ export const ajaxSettings = {
   };
   
   export const toolbarSettings = {
-    visible: false,
+    visible: true,
     items: [
       "NewFolder",
       "SortBy",
@@ -44,7 +44,7 @@ export const ajaxSettings = {
       "|",
       "SelectAll",
     ],
-    visible: false,
+    visible: true,
   };
   
   export const view = "Details";
@@ -52,27 +52,27 @@ export const ajaxSettings = {
   export const detailsViewSettings = {
     columns: [
       {
-        field: "name",
+        field: "name_",
         headerText: "Name",
         customAttributes: { class: "e-fe-grid-name" },
         width: "110",
       },
       {
         field: "size",
-        headerText: "Size",
+        headerText: "Size_",
         template: '<span class="e-fe-size">${size}</span>',
         width: "40",
         format: "n2",
       },
       {
         field: "format_360",
-        headerText: "360 Format",
+        headerText: "360 Format_",
         template: '<span class="e-fe-size">${format_360}</span>',
         format: "n2",
         width: "90",
       },
       {
-        field: "processed",
+        field: "processed_",
         headerText: "Processed",
         template: '<span>${processed}</span>',
         width: "90",
@@ -105,5 +105,3 @@ export const ajaxSettings = {
     // AllowedExtensions: ".jpg, .jpeg, .png, .gif, .bmp, .svg, .mov",
 
   };
-
-

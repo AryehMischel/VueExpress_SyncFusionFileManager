@@ -593,6 +593,7 @@ function destroyLayer(imagename) {
 }
 
 function setLayer(layer) {
+  console.log("setting layer", layer);
   // let layerLength = xrSession.renderState.layers.length;
   xrSession.updateRenderState({
     layers: [
@@ -1331,18 +1332,34 @@ class ImageManager {
     if (this.images[name]) {
       this.currentImage = this.images[name];
 
-      console.log("is Immersive Session?", store.getImmersiveSession);
-      console.log("has Layer?", this.images[name].layer);
+      if (store.getImmersiveSession) {
 
-      if (store.getImmersiveSession && this.images[name].layer) {
+        if(!this.currentImage.loaded){
+          return;
+        }
+
+        if(!this.currentImage.layer){
+          console.log("creating layer for current image");
+          this.images[name].createXRLayer();
+        }
+
         if (!this.activeLayers.has(name)) {
+          console.log("adding layer to active layers");
           this.activeLayers.add(name);
         }
+
         if(scene.background){
           logger.log("removing scene background");
           scene.background = null;
         }
-        setLayer(this.images[name].layer);
+
+
+        //now we should be all set
+        if(this.currentImage.layer){
+          console.log('setting layer');
+          setLayer(this.images[name].layer);
+        }
+        
       } else {
         imageDisplayManager.displayImage(this.currentImage);
       }
@@ -1353,7 +1370,6 @@ class ImageManager {
 
   async createImageObjects(imageData) {
     if (imageData.groupId in this.images) {
-
       if (store.getImmersiveSession && !this.images[imageData.groupId].layer) {
         console.log("creating layer for existing image");
         this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
@@ -1445,7 +1461,7 @@ class ImageManager {
     let layersInCWD = this.XRlayerQueue[cwd];
 
     for (let i = 0; i < layersInCWD.length; i++) {
-      if (!this.images[layersInCWD[i]].layer) {
+      if (!this.images[layersInCWD[i]].layer && this.images[layersInCWD[i]].loaded) {
         this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
         // this.activeLayers.add(layersInCWD[i]);
       }

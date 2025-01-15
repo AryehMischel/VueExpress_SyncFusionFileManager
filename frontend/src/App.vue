@@ -4,14 +4,14 @@
       <ejs-filemanager
         id="file-manager"
         ref="fileManagerRef"
-        :ajaxSettings="ajaxSettings"
-        :contextMenuSettings="contextMenuSettings"
-        :toolbarSettings="toolbarSettings"
-        :view="view"
-        :breadcrumbBarSettings="breadcrumbBarSettings"
-        :detailsViewSettings="detailsViewSettings"
+        :ajaxSettings="state.ajaxSettings"
+        :contextMenuSettings="state.contextMenuSettings"
+        :toolbarSettings="state.toolbarSettings"
+        :view="state.view"
+        :breadcrumbBarSettings="state.breadcrumbBarSettings"
+        :detailsViewSettings="state.detailsViewSettings"
         :allowDragAndDrop="true"
-        :uploadSettings="uploadSettings"
+        :uploadSettings="state.uploadSettings"
         @fileOpen="(args) => eventHandlers.onFileOpen(args)"
         @beforeSend="(args) => eventHandlers.onBeforeSend(args, fileManagerRef)"
         @success="(args) => eventHandlers.onSuccess(args, state)"
@@ -59,6 +59,20 @@ import {
   breadcrumbBarSettings,
   uploadSettings,
 } from "./fileManagerSettings.js";
+
+
+import {
+  ajaxSettings as ajaxSettingsVR,
+  toolbarSettings as toolbarSettingsVR,
+  contextMenuSettings as contextMenuSettingsVR,
+  view as viewVR,
+  detailsViewSettings as detailsViewSettingsVR,
+  breadcrumbBarSettings as breadcrumbBarSettingsVR,
+  uploadSettings as uploadSettingsVR,
+} from "./fileManagerSettingsVR.js";
+
+
+
 import { logger } from "sequelize/lib/utils/logger";
 
 
@@ -89,14 +103,25 @@ const state = reactive({
 provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
 let store;
 
-const initializeApp = async () => {
-  // await new Promise(resolve => setTimeout(resolve, 2000));
+const initializeApp = async () => { 
+  const isVR = computed(() => store.isVR);
+
+  if(isVR){
+  state.ajaxSettings = ajaxSettingsVR;
+  state.contextMenuSettings = contextMenuSettingsVR;
+  state.breadcrumbBarSettings = breadcrumbBarSettingsVR;
+  state.detailsViewSettings = detailsViewSettingsVR;
+  state.uploadSettings = uploadSettingsVR;
+  }else{
   state.ajaxSettings = ajaxSettings;
   state.contextMenuSettings = contextMenuSettings;
   state.breadcrumbBarSettings = breadcrumbBarSettings;
   state.detailsViewSettings = detailsViewSettings;
   state.uploadSettings = uploadSettings;
-  await store.checkVRDevice();
+
+  }
+  // await new Promise(resolve => setTimeout(resolve, 2000));
+
   isInitialized.value = true;
 };
 
