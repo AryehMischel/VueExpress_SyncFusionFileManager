@@ -62,7 +62,6 @@ window.vrMode = vrMode;
 
 let IShighlighted = false;
 
-
 window.GlobalHighlight = IShighlighted;
 
 //vr ui stuff
@@ -150,7 +149,7 @@ controllers = customControllers(scene, renderer);
 //create interactive group
 group = new InteractiveGroup();
 group.listenToXRControllerEvents(controllers[0]);
-group.listenToXRControllerEvents(controllers[1]);
+// group.listenToXRControllerEvents(controllers[1]);
 scene.add(group);
 
 // controllers[0].addEventListener('selectstart', onSelectStart);
@@ -1845,16 +1844,6 @@ async function loadCompressedEqrt() {
       37808 // Use appropriate ASTC format
     );
 
-    // // Create a DataView starting from byte offset 16
-    // const astcData = new DataView(arrayBuffer, 16);
-
-    // // Create a compressed texture
-    // const compressedTexture = new CompressedTexture(
-    //   [{ data: astcData, width, height }],
-    //   width,
-    //   height,
-    //   37808
-    // );
 
     compressedTexture.mapping = EquirectangularReflectionMapping;
     compressedTexture.needsUpdate = true;
@@ -1878,37 +1867,61 @@ function createXRLayerBeforeVRMode() {}
 const loader = new GLTFLoader();
 let animatedPath = "https://d368ik34cg55zg.cloudfront.net/sample.glb";
 
-let arrowBaseMaterial;
-let arrowNode;
-let arrowHighlighted = false;
 
 
+let arrowBaseMaterialLeft;
+let arrowBaseMaterialRight;
 
-function unhighlight(){
-  console.log("unhighlighting");
-  highlightArrow(false);
+let rightArrowNode;
+let leftArrowNode;
+
+function highlightRightArrow() {
+  rightArrowNode.material.uniforms.highlighted.value = true;
 }
 
-window.GLOBALunlight = unhighlight;
+function highlightLeftArrow() {
+  leftArrowNode.material.uniforms.highlighted.value = true;
+}
+
+function unhighlightLeftArrow() {
+  leftArrowNode.material.uniforms.highlighted.value = false;
+}
+
+function unhighlightRightArrow() {
+  rightArrowNode.material.uniforms.highlighted.value = false;
+}
+
+
+window.unhighlightLeftArrow = unhighlightLeftArrow;
+window.unhighlightRightArrow = unhighlightRightArrow;
+window.highlightLeftArrow = highlightLeftArrow;
+window.highlightRightArrow = highlightRightArrow;
+
+
 
 function loadInArrows() {
   loader.load(
     animatedPath,
     function (gltf) {
       // Add a cylinder mesh for interactions
-      const cylinderGeometry = new CylinderGeometry(0.5, 0.5, 2, 32);
+      const cylinderGeometry = new CylinderGeometry(0.5, 0.5, 0.5, 32);
+
       const cylinderMaterial = new MeshBasicMaterial({
         color: 0xff0000,
         wireframe: true,
       });
 
       const interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh1.rotation.x = Math.PI / 2;
       interactionMesh1.position.set(0, 0, -2);
+      interactionMesh1.userData.name = "rightArrow";
       interactionMesh1.userData.interactive = true; // Mark as interactive
       group.add(interactionMesh1);
 
       const interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh2.rotation.x = Math.PI / 2;
       interactionMesh2.position.set(2, 0, -2);
+      interactionMesh2.userData.name = "leftArrow";
       interactionMesh2.userData.interactive = true; // Mark as interactive
       group.add(interactionMesh2);
 
@@ -1916,23 +1929,30 @@ function loadInArrows() {
       const model1 = gltf.scene.clone();
       model1.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
       model1.rotation.z = -(Math.PI / 2);
+      model1.rotation.x = Math.PI / 2;
       interactionMesh1.add(model1);
 
       const model2 = gltf.scene.clone();
       model2.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
       model2.rotation.z = Math.PI / 2;
+      model2.rotation.x = Math.PI / 2;
       interactionMesh2.add(model2);
 
       model1.traverse((child) => {
         if (child.isMesh) {
-          console.log("Mesh:", child);
-          console.log("Materials:", child.material);
-          arrowNode = child;
-          let clonedMaterial = child.material.clone();
-          arrowBaseMaterial = clonedMaterial;
+          rightArrowNode = child;
+          let clonedMaterialRight = child.material.clone();
+          arrowBaseMaterialRight = clonedMaterialRight;
         }
       });
 
+      model2.traverse((child) => {
+        if (child.isMesh) {
+          let clonedMaterialLeft = child.material.clone();
+          leftArrowNode = child;
+          arrowBaseMaterialLeft = clonedMaterialLeft;
+        }
+      });
 
       // hoveron: { data: Vector2 };
       // pointerdown: { data: Vector2 };
@@ -1943,83 +1963,86 @@ function loadInArrows() {
       // mousemove: { data: Vector2 };
       // click: { data: Vector2 };
 
-      // Add event listeners to the interaction meshes
-      interactionMesh1.addEventListener("click", () => {
-        console.log("clicked on model1 mesh");
+        interactionMesh1.addEventListener("click", () => {
+        imageManager.selectNextImage();
       });
-      interactionMesh1.addEventListener("hoveron", () => {
-        console.log("hovered on model1 mesh");
-      });
-      interactionMesh1.addEventListener("hoveroff", () => {
-        console.log("hovered off model1 mesh");
-      });
-      interactionMesh1.addEventListener("selectstart", () => {
-        console.log("selectstart on model1 mesh");
-      });
-      interactionMesh1.addEventListener("selectend", () => {
-        console.log("selectend on model1 mesh");
-      });
-      interactionMesh1.addEventListener("pointerup", () => {
-        console.log("pointerup on model1 mesh");
-      });
-      interactionMesh1.addEventListener("pointermove", () => {
-        console.log("pointermove on model1 mesh");
-      });
-      
-      interactionMesh1.addEventListener("mousedown", () => {
-        console.log("mousedown on model1 mesh");
-      });
-            
-      interactionMesh1.addEventListener("mouseup", () => {
-        console.log("mouseup on model1 mesh");
-      });
-
-
-      interactionMesh1.addEventListener("mousemove", () => {
-        if(!GlobalHighlight){
-          console.log("highlighting arrow")
-          highlightArrow(true);
-          GlobalHighlight = true;
-        }
-          
-      });
-
 
       interactionMesh2.addEventListener("click", () => {
-        console.log("clicked on model2 mesh");
-      });
-      interactionMesh2.addEventListener("hoveron", () => {
-        console.log("hovered on model2 mesh");
-      });
-      interactionMesh2.addEventListener("hoveroff", () => {
-        console.log("hovered off model2 mesh");
-      });
-      interactionMesh2.addEventListener("selectstart", () => {
-        console.log("selectstart on model2 mesh");
-      });
-      interactionMesh2.addEventListener("selectend", () => {
-        console.log("selectend on model2 mesh");
+        imageManager.selectPreviousImage();
       });
 
-      interactionMesh2.addEventListener("pointerup", () => {
-        console.log("pointerup on model1 mesh");
-      });
-      interactionMesh2.addEventListener("pointermove", () => {
-        console.log("pointermove on model1 mesh");
-      });
-      
-      interactionMesh2.addEventListener("mousedown", () => {
-        console.log("mousedown on model1 mesh");
-      });
-            
-      interactionMesh2.addEventListener("mouseup", () => {
-        console.log("mouseup on model1 mesh");
-      });
+      // Add event listeners to the interaction meshes
+      // interactionMesh1.addEventListener("click", () => {
+      //   console.log("clicked on model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("hoveron", () => {
+      //   console.log("hovered on model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("hoveroff", () => {
+      //   console.log("hovered off model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("selectstart", () => {
+      //   console.log("selectstart on model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("selectend", () => {
+      //   console.log("selectend on model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("pointerup", () => {
+      //   console.log("pointerup on model1 mesh");
+      // });
+      // interactionMesh1.addEventListener("pointermove", () => {
+      //   console.log("pointermove on model1 mesh");
+      // });
 
+      // interactionMesh1.addEventListener("mousedown", () => {
+      //   console.log("mousedown on model1 mesh");
+      // });
 
-      interactionMesh2.addEventListener("mousemove", () => {
-        console.log("mouse moving over mesh");
-      });
+      // interactionMesh1.addEventListener("mouseup", () => {
+      //   console.log("mouseup on model1 mesh");
+      // });
+
+      // interactionMesh1.addEventListener("mousemove", () => {
+      //   if (!GlobalHighlight) {
+      //     console.log("highlighting arrow");
+      //     GlobalHighlight = true;
+      //   }
+      // });
+
+      // interactionMesh2.addEventListener("click", () => {
+      //   console.log("clicked on model2 mesh");
+      // });
+      // interactionMesh2.addEventListener("hoveron", () => {
+      //   console.log("hovered on model2 mesh");
+      // });
+      // interactionMesh2.addEventListener("hoveroff", () => {
+      //   console.log("hovered off model2 mesh");
+      // });
+      // interactionMesh2.addEventListener("selectstart", () => {
+      //   console.log("selectstart on model2 mesh");
+      // });
+      // interactionMesh2.addEventListener("selectend", () => {
+      //   console.log("selectend on model2 mesh");
+      // });
+
+      // interactionMesh2.addEventListener("pointerup", () => {
+      //   console.log("pointerup on model1 mesh");
+      // });
+      // interactionMesh2.addEventListener("pointermove", () => {
+      //   console.log("pointermove on model1 mesh");
+      // });
+
+      // interactionMesh2.addEventListener("mousedown", () => {
+      //   console.log("mousedown on model1 mesh");
+      // });
+
+      // interactionMesh2.addEventListener("mouseup", () => {
+      //   console.log("mouseup on model1 mesh");
+      // });
+
+      // interactionMesh2.addEventListener("mousemove", () => {
+      //   console.log("mouse moving over mesh");
+      // });
 
       // Simulate events for testing
       // setTimeout(() => {
@@ -2035,7 +2058,6 @@ function loadInArrows() {
       //   interactionMesh2.dispatchEvent({ type: "selectend" });
       // }, 1000); // Delay to ensure models are added to the scene
 
-      
       createCustomMaterial();
     },
     undefined,
@@ -2043,8 +2065,6 @@ function loadInArrows() {
       console.error("An error occurred while loading the GLTF file:", error);
     }
   );
-
-
 }
 
 function addInteractiveBox() {
@@ -2079,8 +2099,9 @@ window.addbox = addInteractiveBox;
 window.loadInArrows = loadInArrows;
 
 function createCustomMaterial() {
-  let arrowShader = new CustomShaderMaterial({
-    baseMaterial: arrowBaseMaterial,
+
+  let rightArrowShader = new CustomShaderMaterial({
+    baseMaterial: arrowBaseMaterialRight,
     uniforms: {
       highlighted: { value: false }, // Add a uniform for highlighting
       edgeColor: { value: new Color(1, 0.27, 0.63) }, // Add a uniform for the color
@@ -2090,18 +2111,22 @@ function createCustomMaterial() {
     fragmentShader: fs,
   });
 
-  arrowNode.material = arrowShader;
+  
+  let leftArrowShader = new CustomShaderMaterial({
+    baseMaterial: arrowBaseMaterialLeft,
+    uniforms: {
+      highlighted: { value: false }, // Add a uniform for highlighting
+      edgeColor: { value: new Color(1, 0.27, 0.63) }, // Add a uniform for the color
+    },
 
+    vertexShader: vs,
+    fragmentShader: fs,
+  });
+
+  leftArrowNode.material = leftArrowShader;
+  rightArrowNode.material = rightArrowShader;
 }
 
-
-function highlightArrow(value) {
-  arrowNode.material.uniforms.highlighted.value = value;
-}
-
-
-
-window.highlightArrow = highlightArrow;
 
 window.createCustomMaterial = createCustomMaterial;
 

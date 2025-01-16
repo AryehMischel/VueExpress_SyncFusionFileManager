@@ -1,75 +1,81 @@
-import {
-	Group,
-	Raycaster,
-	Vector2
-} from 'three';
+import { Group, Raycaster, Vector2 } from "three";
 
 const _pointer = new Vector2();
-const _event = { type: '', data: _pointer };
+const _event = { type: "", data: _pointer };
 
 const _raycaster = new Raycaster();
 
-
-
+// let highlightedObject = [];
+let rightArrowHighlighted = false;
+let leftArrowHighlighted = false;
 
 class InteractiveGroup extends Group {
+  listenToPointerEvents(renderer, camera) {}
 
-	listenToPointerEvents( renderer, camera ) {
-	}
+  listenToXRControllerEvents(controller) {
+    const scope = this;
 
-	listenToXRControllerEvents( controller ) {
+    // TODO: Dispatch pointerevents too
 
-		const scope = this;
+    const events = {
+      move: "mousemove",
 
-		// TODO: Dispatch pointerevents too
+      select: "click",
+      selectstart: "mousedown",
+      selectend: "mouseup",
+    };
 
-		const events = {
-			'move': 'mousemove',
-			'select': 'click',
-			'selectstart': 'mousedown',
-			'selectend': 'mouseup'
-		};
+    function onXRControllerEvent(event) {
+      const controller = event.target;
 
-		
+      _raycaster.setFromXRController(controller);
 
-		function onXRControllerEvent( event ) {
+      const intersections = _raycaster.intersectObjects(scope.children, false);
 
-			const controller = event.target;
+      if (intersections.length > 0) {
+        const intersection = intersections[0];
 
-			_raycaster.setFromXRController( controller );
+        const object = intersection.object;
+        console.log("intersected object", object.userData.name);
 
-			const intersections = _raycaster.intersectObjects( scope.children, false );
+        if (!rightArrowHighlighted) {
+          if (object.userData.name === "rightArrow") {
+            rightArrowHighlighted = true;
+            highlightRightArrow();
+          }
+        }
 
-			if ( intersections.length > 0 ) {
+        if (!leftArrowHighlighted) {
+          if (object.userData.name === "leftArrow") {
+            leftArrowHighlighted = true;
+            highlightLeftArrow();
+          }
+        }
 
-				const intersection = intersections[ 0 ];
+        const uv = intersection.uv;
 
-				const object = intersection.object;
-				const uv = intersection.uv;
+        _event.type = events[event.type];
+        _event.data.set(uv.x, 1 - uv.y);
 
-				_event.type = events[ event.type ];
-				_event.data.set( uv.x, 1 - uv.y );
+        object.dispatchEvent(_event);
+      } else {
+        if (rightArrowHighlighted) {
+          rightArrowHighlighted = false;
+          unhighlightRightArrow();
+        }
 
-				object.dispatchEvent( _event );
+        if (leftArrowHighlighted) {
+          leftArrowHighlighted = false;
+          unhighlightLeftArrow();
+        }
+      }
+    }
 
-			} else{
-				console.log("no interactions")
-				if(GlobalHighlight){
-					console.log("unlighting")
-					GlobalHighlight = false;
-					GLOBALunlight();
-				}
-			}
-
-		}
-
-		controller.addEventListener( 'move', onXRControllerEvent );
-		controller.addEventListener( 'select', onXRControllerEvent );
-		controller.addEventListener( 'selectstart', onXRControllerEvent );
-		controller.addEventListener( 'selectend', onXRControllerEvent );
-
-	}
-
+    controller.addEventListener("move", onXRControllerEvent);
+    controller.addEventListener("select", onXRControllerEvent);
+    controller.addEventListener("selectstart", onXRControllerEvent);
+    controller.addEventListener("selectend", onXRControllerEvent);
+  }
 }
 
 export { InteractiveGroup };
