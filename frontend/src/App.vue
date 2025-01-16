@@ -85,6 +85,7 @@ const onToolbarClick = (args) => {
   if (args.item.properties.text === 'customButton') {
     // Custom action logic here
     console.log('Custom button clicked');
+    // hideFileManager();
     // Add your custom method logic here
   }
 };

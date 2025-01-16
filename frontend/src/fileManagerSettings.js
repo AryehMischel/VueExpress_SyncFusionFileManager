@@ -16,6 +16,7 @@ export const ajaxSettings = {
     items: [
       "NewFolder",
       "customButton",
+      "CLOSE PANEL",
       "SortBy",
       "Cut",
       "Copy",

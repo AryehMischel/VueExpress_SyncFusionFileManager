@@ -117,6 +117,7 @@ export const onSuccess = async (args, state) => {
 
     await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
     setBreadCrumb();
+    SET_TOOLBAR();
   }
 };
 

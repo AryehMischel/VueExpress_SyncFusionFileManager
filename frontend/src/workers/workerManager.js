@@ -22,8 +22,8 @@ export const createWebWorkers = () => {
       if (e.data.jobCompleted === "detect_360_Format") {
         logger.log("format detected: ", e.data);
         await handleFormatDetection(e);
-      } else if (e.data.jobCompleted === "processed_cube_faces") {
-        processCubeFaces(e);
+      } else if (e.data.jobCompleted === "preprocessed_textures") {
+        handleProcessedTextures(e);
       }
 
       workerStatus[i] = false;
@@ -105,7 +105,7 @@ const handleFormatDetection = async (e) => {
 
 
 const handleProcessedTextures = async (e) => {
-  
+  logger.log("handle processed textures");
 }
 
 const processCubeFaces = (e) => {
@@ -115,8 +115,15 @@ const processCubeFaces = (e) => {
 export const processImage = async (file, id, clientImageId) => {
   const availableWorkerIndex = workerStatus.findIndex((status) => !status);
   if (availableWorkerIndex !== -1) {
-    workerStatus[availableWorkerIndex] = true; // Mark the worker as busy
-    workers[availableWorkerIndex].postMessage({ file, id, clientImageId });
+
+    if(store.getProcessClientSide){
+      workerStatus[availableWorkerIndex] = true; // Mark the worker as busy
+      workers[availableWorkerIndex].postMessage({ file, id, clientImageId, processClientSide: true });
+    }else{
+      workerStatus[availableWorkerIndex] = true; // Mark the worker as busy
+      workers[availableWorkerIndex].postMessage({ file, id, clientImageId });
+    }
+
   } else {
     // add file to work queue
   }

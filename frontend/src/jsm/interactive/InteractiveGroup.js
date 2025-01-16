@@ -36,7 +36,7 @@ class InteractiveGroup extends Group {
         const intersection = intersections[0];
 
         const object = intersection.object;
-        console.log("intersected object", object.userData.name);
+     
 
         if (!rightArrowHighlighted) {
           if (object.userData.name === "rightArrow") {

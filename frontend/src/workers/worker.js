@@ -9,6 +9,7 @@ self.onmessage = async function (event) {
     let clientImageId = event.data.clientImageId;
     const imageID = event.data.id;
     var bitmap = null;
+    var processClientSide = event.data.processClientSide;
 
     const imageFiles = event.data.imageFiles;
 
@@ -90,7 +91,9 @@ self.onmessage = async function (event) {
                 // if (generateThumbnail) {
                 //     await createThumbNail('eqrt', bitmap, imageID)
                 // }
-                // self.postMessage({ work: "createTexture", format: "eqrt", bitmap, imageID }, bitmap);
+                if(processClientSide){
+                    self.postMessage({ jobCompleted: "preprocessed_textures", format: "eqrt", bitmap, clientImageId }, bitmap);
+                }
                 return "eqrt";
             //   addFormatIcon(this.name, "eqrt");
             //   createEqrtTexture(this); break;

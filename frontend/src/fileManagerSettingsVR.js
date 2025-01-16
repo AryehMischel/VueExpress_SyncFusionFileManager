@@ -14,7 +14,7 @@ export const ajaxSettings = {
   export const toolbarSettings = {
     visible: true,
     items: [
-      "shrink ui",
+      "CLOSE PANEL",
     ],
   };
   

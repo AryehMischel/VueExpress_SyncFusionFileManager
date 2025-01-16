@@ -1619,6 +1619,19 @@ function addFileManager() {
   window.vrui = vrui;
 }
 
+function hideFileManager() {
+  vrui.visible = false;
+  group.remove(vrui);
+}
+
+function unhideFileManager() {
+  vrui.visible = true;
+  group.add(vrui);
+}
+
+window.hideFileManager = hideFileManager;
+window.unhideFileManager = unhideFileManager;
+
 async function getRowGroup() {
   const fileManagerGrid = document.getElementById("file-manager_grid");
   if (fileManagerGrid) {
@@ -1668,206 +1681,22 @@ function setBreadCrumb() {
   }
 }
 
+function setToolBar() {
+  let toolBar = document.getElementById("file-manager_tb_close panel");
+  console.log("toolbar", toolBar);
+  toolBar.addEventListener("click", () => {
+    swapUI();
+    console.log("clicked on toolbar");
+  });
+}
+
+window.SET_TOOLBAR = setToolBar;
 window.links = urls;
 
 window.setBreadCrumb = setBreadCrumb;
 
-//     name: "Test_ASTC_Layer",
-//     url: "./textures/ASTC/Forest/testpx.astc",
-//     type: "quad",
-//     height: 1536,
-//     width: 1536,
-
-async function loadInCompressedTexture(
-  url = "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/px.astc"
-) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  const arrayBuffer = await response.arrayBuffer();
-  var rawData = new Uint8Array(arrayBuffer);
-  logger.log("rawData: ", rawData);
-  logger.log("rawDataLength: ", rawData.Length);
-
-  // Create a DataView starting from byte offset 16
-  const astcData = new DataView(arrayBuffer, 16);
-
-  const width = 1536; // Width of the texture
-  const height = 1536; // Height of the texture
-  const format = 37808; //THREE.RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
-
-  // Create a compressed texture
-  const compressedTexture = new CompressedTexture(
-    [{ data: astcData, width, height }], // Mipmaps (can be an array of levels)
-    width,
-    height,
-    format
-  );
-
-  compressedTexture.minFilter = LinearMipmapLinearFilter;
-  compressedTexture.magFilter = LinearFilter;
-  compressedTexture.needsUpdate = true;
-
-  // Use the texture in a material
-  //   const material = new MeshStandardMaterial({
-  //     map: compressedTexture,
-  //   });
-
-  //   // Apply material to a mesh
-  //   const mesh = new Mesh(new BoxGeometry(1, 1, 1), material);
-  //   mesh.position.set(0, 0, -5);
-  //   scene.add(mesh);
-}
-
-let compressedDataUrls = [
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/px.astc",
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/nx.astc",
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/py.astc",
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/ny.astc",
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/pz.astc",
-  "https://d1w8hynvb3moja.cloudfront.net/6c4904e89bc9d5879b444983ff15f08d/left/nz.astc",
-];
-async function loadInCompressedCubeMap(urls) {
-  logger.log("URLs passed to loadInCompressedCubeMap:", urls);
-
-  if (!urls || !Array.isArray(urls)) {
-    throw new Error("Invalid URLs array");
-  }
-
-  try {
-    const promises = urls.map(async (url) => {
-      logger.log("Fetching URL:", url);
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const rawData = new Uint8Array(arrayBuffer);
-      logger.log("rawData: ", rawData);
-      logger.log("rawDataLength: ", rawData.length);
-
-      // Create a DataView starting from byte offset 16
-      const astcData = new Uint8Array(arrayBuffer, 16); // Skip the ASTC header
-
-      const width = 1536; // Width of the texture
-      const height = 1536; // Height of the texture
-      const format = 37808; //RGBA_ASTC_4x4_Format; // Use appropriate ASTC format
-
-      return {
-        data: astcData,
-        width,
-        height,
-        format,
-      };
-    });
-
-    const facesData = await Promise.all(promises);
-
-    logger.log("Faces data:", facesData);
-
-    const compressedTexture = new CompressedCubeTexture(
-      facesData.map((face) => ({
-        mipmaps: [{ data: face.data, width: face.width, height: face.height }],
-        width: face.width,
-        height: face.height,
-        format: face.format,
-      })),
-      37808,
-      UnsignedByteType
-    );
-
-    //   compressedTexture.minFilter = LinearMipmapLinearFilter;
-    //   compressedTexture.magFilter = LinearFilter;
-    //   compressedTexture.generateMipmaps = true;
-    compressedTexture.needsUpdate = true;
-
-    return compressedTexture;
-  } catch (error) {
-    logger.error("Error loading compressed cube map:", error);
-    throw error;
-  }
-}
-
-// loadInCompressedCubeMap(compressedDataUrls).then((texture) => {
-//   // Use the texture
-//   logger.log('CompressedCubeTexture loaded:', texture);
-//   scene.background = texture;
-// }).catch(error => {
-//   logger.error('Error loading compressed cube map:', error);
-// });
-
-window.loadInCompressedCubeMap = loadInCompressedCubeMap;
-
-async function loadCompressedEqrt() {
-  let width = 1024;
-  let height = 1024;
-  let url = `${cdnPath}/73c135cc0dd834e59368ce6761536b16.astc`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    const rawData = new Uint8Array(arrayBuffer);
-    logger.log("rawData: ", rawData);
-    logger.log("rawDataLength: ", rawData.length);
-
-    // ASTC header is 16 bytes, data starts after that`
-    const headerSize = 16;
-    const blockSize = 4; // 4x4 block size
-    const blockBytes = 16; // 16 bytes per block
-
-    // Calculate the number of blocks in the full image
-    const blocksPerRow = width / blockSize;
-    const blocksPerColumn = height / blockSize;
-
-    // Calculate the number of blocks in the bottom half
-    const bottomHalfBlocks = (blocksPerColumn / 2) * blocksPerRow;
-
-    // Extract the bottom half data
-    const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
-    const startOffset =
-      headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
-    bottomHalfData.set(
-      rawData.subarray(startOffset, startOffset + bottomHalfData.length)
-    );
-
-    // Create a DataView for the bottom half data
-    const astcData = new DataView(bottomHalfData.buffer);
-
-    // Create a compressed texture for the bottom half
-    const compressedTexture = new CompressedTexture(
-      [{ data: astcData, width, height: height / 2 }], // Mipmaps (can be an array of levels)
-      width,
-      height / 2,
-      37808 // Use appropriate ASTC format
-    );
-
-
-    compressedTexture.mapping = EquirectangularReflectionMapping;
-    compressedTexture.needsUpdate = true;
-    compressedTexture.generateMipmaps = true;
-    scene.background = compressedTexture;
-  } catch (error) {
-    console.error("Error loading ASTC file:", error);
-  }
-}
-
-function makeSceneBlue() {
-  scene.background = new Color(0x0000ff);
-}
-window.makeSceneBlue = makeSceneBlue;
-window.loadCompressedEqrt = loadCompressedEqrt;
-
-function requestImmersiveSession() {}
-
-function createXRLayerBeforeVRMode() {}
-
 const loader = new GLTFLoader();
 let animatedPath = "https://d368ik34cg55zg.cloudfront.net/sample.glb";
-
-
 
 let arrowBaseMaterialLeft;
 let arrowBaseMaterialRight;
@@ -1891,11 +1720,13 @@ function unhighlightRightArrow() {
   rightArrowNode.material.uniforms.highlighted.value = false;
 }
 
-
 window.unhighlightLeftArrow = unhighlightLeftArrow;
 window.unhighlightRightArrow = unhighlightRightArrow;
 window.highlightLeftArrow = highlightLeftArrow;
 window.highlightRightArrow = highlightRightArrow;
+
+let interactionMesh1;
+let interactionMesh2;
 
 
 
@@ -1904,36 +1735,38 @@ function loadInArrows() {
     animatedPath,
     function (gltf) {
       // Add a cylinder mesh for interactions
-      const cylinderGeometry = new CylinderGeometry(0.5, 0.5, 0.5, 32);
+      const cylinderGeometry = new CylinderGeometry(0.125, 0.125, 0.125, 32);
 
       const cylinderMaterial = new MeshBasicMaterial({
         color: 0xff0000,
         wireframe: true,
+        // transparent: true,
+        // opacity: 0
       });
 
-      const interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
       interactionMesh1.rotation.x = Math.PI / 2;
-      interactionMesh1.position.set(0, 0, -2);
+      interactionMesh1.position.set(-1, 1, -1);
       interactionMesh1.userData.name = "rightArrow";
       interactionMesh1.userData.interactive = true; // Mark as interactive
-      group.add(interactionMesh1);
 
-      const interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
       interactionMesh2.rotation.x = Math.PI / 2;
-      interactionMesh2.position.set(2, 0, -2);
+      interactionMesh2.position.set(1, 1, -1);
       interactionMesh2.userData.name = "leftArrow";
       interactionMesh2.userData.interactive = true; // Mark as interactive
-      group.add(interactionMesh2);
 
       // Clone the model and add it as a child of the interaction mesh
       const model1 = gltf.scene.clone();
       model1.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
+      model1.scale.set(0.25, 0.25, 0.25);
       model1.rotation.z = -(Math.PI / 2);
       model1.rotation.x = Math.PI / 2;
       interactionMesh1.add(model1);
 
       const model2 = gltf.scene.clone();
       model2.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
+      model2.scale.set(0.25, 0.25, 0.25);
       model2.rotation.z = Math.PI / 2;
       model2.rotation.x = Math.PI / 2;
       interactionMesh2.add(model2);
@@ -1954,109 +1787,13 @@ function loadInArrows() {
         }
       });
 
-      // hoveron: { data: Vector2 };
-      // pointerdown: { data: Vector2 };
-      // pointerup: { data: Vector2 };
-      // pointermove: { data: Vector2 };
-      // mousedown: { data: Vector2 };
-      // mouseup: { data: Vector2 };
-      // mousemove: { data: Vector2 };
-      // click: { data: Vector2 };
-
-        interactionMesh1.addEventListener("click", () => {
+      interactionMesh1.addEventListener("click", () => {
         imageManager.selectNextImage();
       });
 
       interactionMesh2.addEventListener("click", () => {
         imageManager.selectPreviousImage();
       });
-
-      // Add event listeners to the interaction meshes
-      // interactionMesh1.addEventListener("click", () => {
-      //   console.log("clicked on model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("hoveron", () => {
-      //   console.log("hovered on model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("hoveroff", () => {
-      //   console.log("hovered off model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("selectstart", () => {
-      //   console.log("selectstart on model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("selectend", () => {
-      //   console.log("selectend on model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("pointerup", () => {
-      //   console.log("pointerup on model1 mesh");
-      // });
-      // interactionMesh1.addEventListener("pointermove", () => {
-      //   console.log("pointermove on model1 mesh");
-      // });
-
-      // interactionMesh1.addEventListener("mousedown", () => {
-      //   console.log("mousedown on model1 mesh");
-      // });
-
-      // interactionMesh1.addEventListener("mouseup", () => {
-      //   console.log("mouseup on model1 mesh");
-      // });
-
-      // interactionMesh1.addEventListener("mousemove", () => {
-      //   if (!GlobalHighlight) {
-      //     console.log("highlighting arrow");
-      //     GlobalHighlight = true;
-      //   }
-      // });
-
-      // interactionMesh2.addEventListener("click", () => {
-      //   console.log("clicked on model2 mesh");
-      // });
-      // interactionMesh2.addEventListener("hoveron", () => {
-      //   console.log("hovered on model2 mesh");
-      // });
-      // interactionMesh2.addEventListener("hoveroff", () => {
-      //   console.log("hovered off model2 mesh");
-      // });
-      // interactionMesh2.addEventListener("selectstart", () => {
-      //   console.log("selectstart on model2 mesh");
-      // });
-      // interactionMesh2.addEventListener("selectend", () => {
-      //   console.log("selectend on model2 mesh");
-      // });
-
-      // interactionMesh2.addEventListener("pointerup", () => {
-      //   console.log("pointerup on model1 mesh");
-      // });
-      // interactionMesh2.addEventListener("pointermove", () => {
-      //   console.log("pointermove on model1 mesh");
-      // });
-
-      // interactionMesh2.addEventListener("mousedown", () => {
-      //   console.log("mousedown on model1 mesh");
-      // });
-
-      // interactionMesh2.addEventListener("mouseup", () => {
-      //   console.log("mouseup on model1 mesh");
-      // });
-
-      // interactionMesh2.addEventListener("mousemove", () => {
-      //   console.log("mouse moving over mesh");
-      // });
-
-      // Simulate events for testing
-      // setTimeout(() => {
-      //   interactionMesh1.dispatchEvent({ type: "click" });
-      //   interactionMesh1.dispatchEvent({ type: "hoveron" });
-      //   interactionMesh1.dispatchEvent({ type: "hoveroff" });
-      //   interactionMesh1.dispatchEvent({ type: "selectstart" });
-      //   interactionMesh1.dispatchEvent({ type: "selectend" });
-      //   interactionMesh2.dispatchEvent({ type: "click" });
-      //   interactionMesh2.dispatchEvent({ type: "hoveron" });
-      //   interactionMesh2.dispatchEvent({ type: "hoveroff" });
-      //   interactionMesh2.dispatchEvent({ type: "selectstart" });
-      //   interactionMesh2.dispatchEvent({ type: "selectend" });
-      // }, 1000); // Delay to ensure models are added to the scene
 
       createCustomMaterial();
     },
@@ -2066,6 +1803,55 @@ function loadInArrows() {
     }
   );
 }
+
+
+
+let returnArrow;
+let returnArrowPath = "https://d368ik34cg55zg.cloudfront.net/returnArrow.glb";
+function loadInReturnArrow() {
+  loader.load(
+    returnArrowPath,
+    function (gltf) {
+      // Add a cylinder mesh for interactions
+      const cylinderGeometry = new BoxGeometry(0.1, 0.3, 0.3);
+
+      const cylinderMaterial = new MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
+        // opacity: 0.0,
+        // transparent: true,
+      });
+
+      returnArrow = new Mesh(cylinderGeometry, cylinderMaterial);
+      // returnArrow.rotation.x = Math.PI / 2;
+      returnArrow.position.set(-2, 1.4, -2);
+      returnArrow.userData.name = "returnArrow";
+      returnArrow.userData.interactive = true; // Mark as interactivereturnArrow
+
+      let model = gltf.scene;
+      model.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
+      model.scale.set(0.1, 0.1, 0.1);
+      model.rotation.x = -(Math.PI / 2);
+      returnArrow.add(model);
+      //scene.add(returnArrow);
+
+      returnArrow.addEventListener("click", () => {
+        swapUI();
+      });
+
+
+    },
+    undefined,
+    function (error) {
+      console.error("An error occurred while loading the GLTF file:", error);
+    }
+  );
+}
+
+window.loadInReturnArrow = loadInReturnArrow;
+
+loadInArrows();
+loadInReturnArrow();
 
 function addInteractiveBox() {
   let geometry = new BoxGeometry(1, 1, 1);
@@ -2095,11 +1881,40 @@ function addInteractiveBox() {
   });
 }
 
-window.addbox = addInteractiveBox;
+function swapUI() {
+  if (vrui.visible) {
+    hideFileManager();
+    unhideArrows();
+  } else {
+    unhideFileManager();
+    hideArrows();
+  }
+}
+
+window.swapUI = swapUI;
+
+function hideArrows() {
+  group.remove(interactionMesh1);
+  group.remove(interactionMesh2);
+  group.remove(returnArrow);
+  interactionMesh1.visible = false;
+  interactionMesh2.visible = false;
+}
+
+function unhideArrows() {
+  group.add(interactionMesh1);
+  group.add(interactionMesh2);
+  group.add(returnArrow);
+  interactionMesh1.visible = true;
+  interactionMesh2.visible = true;
+  // returnArrow.visible = true;
+}
+
+window.hideArrows = hideArrows;
+window.unhideArrows = unhideArrows;
 window.loadInArrows = loadInArrows;
 
 function createCustomMaterial() {
-
   let rightArrowShader = new CustomShaderMaterial({
     baseMaterial: arrowBaseMaterialRight,
     uniforms: {
@@ -2111,7 +1926,6 @@ function createCustomMaterial() {
     fragmentShader: fs,
   });
 
-  
   let leftArrowShader = new CustomShaderMaterial({
     baseMaterial: arrowBaseMaterialLeft,
     uniforms: {
@@ -2126,7 +1940,6 @@ function createCustomMaterial() {
   leftArrowNode.material = leftArrowShader;
   rightArrowNode.material = rightArrowShader;
 }
-
 
 window.createCustomMaterial = createCustomMaterial;
 
