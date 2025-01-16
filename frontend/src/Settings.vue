@@ -33,7 +33,7 @@
       <button class="close-tab-btn" @click="toggleSettingsPanel">
         <i class="fas fa-times"></i>
       </button>
-      <h3>Settings</h3>
+      <h3>...</h3>
 
       <label class="toggle-switch">
         <input type="checkbox" v-model="toggleSwitch" />
@@ -67,7 +67,7 @@ onMounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .icon-button {
   position: absolute;
   top: 10px;
@@ -86,16 +86,17 @@ onMounted(() => {
 }
 
 .settings-panel {
-  position: absolute;
-  /* z-index: 10; */
-  top: 50px;
-  right: 10px;
-  width: 200px;
-  background: white;
-  border: 1px solid #ccc;
-  padding: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: rgb(128, 119, 119);
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  max-width: 300px;
+  z-index: 1000;
 }
+
 
 .settings-panel h3 {
   margin-top: 0;

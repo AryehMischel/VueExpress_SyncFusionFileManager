@@ -15,8 +15,6 @@ export const ajaxSettings = {
     visible: true,
     items: [
       "NewFolder",
-      "customButton",
-      "CLOSE PANEL",
       "SortBy",
       "Cut",
       "Copy",
