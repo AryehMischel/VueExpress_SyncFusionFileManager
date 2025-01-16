@@ -28,8 +28,10 @@ import {
   UnsignedByteType,
   CompressedTexture,
   CompressedCubeTexture,
+  CubeTexture,
   CubeTextureLoader,
   LinearMipmapLinearFilter,
+  SRGBColorSpace,
 } from "three";
 import CustomShaderMaterial from "three-custom-shader-material/vanilla";
 import Stats from "three/examples/jsm/libs/stats.module.js";
@@ -1176,7 +1178,7 @@ class CubeLayer {
 }
 
 class EquirectangularImage {
-  constructor(srcArray, width, height, stereo, id, format) {
+  constructor(srcArray, width, height, stereo, id, format, texture) {
     this.type = "Equirectangular";
     this.layer = null;
     this.astcTextureData = null;
@@ -1186,21 +1188,21 @@ class EquirectangularImage {
     this.stereo = stereo;
     this.width = width;
     this.height = height;
-    this.texture = null;
+    this.texture = texture;
     this.loaded = false;
     this.id = id;
     this.format = format;
     this.radius = 20;
     // Validate the format parameter
-    const allowedFormats = ["astc_4x4", "ktx2", "img"];
-    if (!allowedFormats.includes(format)) {
-      this.format = null;
-      throw new Error(
-        `Invalid format: ${format}. Allowed formats are: ${allowedFormats.join(
-          ", "
-        )}`
-      );
-    }
+    // const allowedFormats = ["astc_4x4", "ktx2", "img"];
+    // if (!allowedFormats.includes(format)) {
+    //   this.format = null;
+    //   throw new Error(
+    //     `Invalid format: ${format}. Allowed formats are: ${allowedFormats.join(
+    //       ", "
+    //     )}`
+    //   );
+    // }
 
     // this.initializeTexture();
   }
@@ -1490,7 +1492,69 @@ class ImageManager {
         imageData.groupId,
         imageData.textureFormat
       );
+
       this.addImage(imageData.groupId, cubeLayer);
+
+    }
+  }
+
+  async createImageObjectWithTexture(id, format_360, texture, height, width) {
+    if(format_360 === 'equirectangular'){
+      let equirectangularImage = new EquirectangularImage(
+        null,
+        width,
+        height,
+        false,
+        id,
+        1023, //bitmap srgb data
+        texture
+      );
+      equirectangularImage.loaded = true;
+      this.images[id] = equirectangularImage;
+      this.imageOrder.push(id);
+      
+    } else if(format_360 === 'stereo_equirectangular'){
+      let equirectangularImage = new EquirectangularImage(
+        null,
+        width,
+        height,
+        true,
+        id,
+        1023, //bitmap srgb data
+        texture
+      );
+      console.log("STEREO EQUIRECTANGULAR IMAGE CREATED", equirectangularImage);
+      equirectangularImage.loaded = true;
+      this.images[id] = equirectangularImage;
+      this.imageOrder.push(id);
+
+    } else if(format_360 === 'cubemap'){
+      let cubeLayer = new CubeLayer(
+        null,
+        width,
+        height,
+        false,
+        id,
+        1023 //bitmap srgb data
+      );
+      cubeLayer.texture = texture;
+      cubeLayer.loaded = true;
+      this.images[id] = cubeLayer;
+      this.imageOrder.push(id);
+    } else if(format_360 === 'stereo_cubemap'){
+      let cubeLayer = new CubeLayer(
+        null,
+        width,
+        height,
+        true,
+        id,
+        1023 //bitmap srgb data
+      );
+      cubeLayer.texture = texture;
+      cubeLayer.loaded = true;
+      this.images[id] = cubeLayer;
+      this.imageOrder.push(id);
+
     }
   }
 
@@ -1719,6 +1783,45 @@ function unhighlightLeftArrow() {
 function unhighlightRightArrow() {
   rightArrowNode.material.uniforms.highlighted.value = false;
 }
+
+
+
+function createTextureObject( bitmap, imageID, format, height, width) {
+  if(format === 'equirectangular'){
+    const texture = new Texture(bitmap);
+    texture.mapping = EquirectangularReflectionMapping;
+    texture.colorSpace = SRGBColorSpace; 
+    texture.needsUpdate = true;
+    renderer.initTexture(texture);
+    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
+  } else if(format === 'stereo_equirectangular'){
+    console.log("creating stereo equirectangular texture");
+    const texture = new Texture(bitmap);
+    texture.mapping = EquirectangularReflectionMapping;
+    texture.colorSpace = SRGBColorSpace; 
+    texture.needsUpdate = true;
+    renderer.initTexture(texture);
+    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
+  }else if(format === 'cubemap'){
+    const texture = new CubeTexture(bitmap);
+    texture.flipY = false; 
+    texture.needsUpdate = true;
+    texture.colorSpace = SRGBColorSpace; 
+    renderer.initTexture(texture);
+    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
+  }else if(format === 'stereo_cubemap'){
+    const texture = new CubeTexture(bitmap);
+    texture.flipY = false; 
+    texture.needsUpdate = true;
+    texture.colorSpace = SRGBColorSpace; 
+    renderer.initTexture(texture);
+    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
+  }
+}
+
+
+
+window.createTextureObject = createTextureObject;
 
 window.unhighlightLeftArrow = unhighlightLeftArrow;
 window.unhighlightRightArrow = unhighlightRightArrow;

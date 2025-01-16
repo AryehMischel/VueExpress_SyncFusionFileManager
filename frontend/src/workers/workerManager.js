@@ -106,6 +106,19 @@ const handleFormatDetection = async (e) => {
 
 const handleProcessedTextures = async (e) => {
   logger.log("handle processed textures");
+  if(e.data.format === "equirectangular"){
+    createTextureObject(e.data.bitmap, e.data.imageID, "equirectangular", e.data.height, e.data.width);
+ 
+  }else if(e.data.format === "stereo_equirectangular"){
+    createTextureObject(e.data.subBitmap, e.data.imageID, "stereo_equirectangular", e.data.height, e.data.width);
+ 
+  } else if(e.data.format === "cubemap"){
+    createTextureObject(e.data.bitmaps, e.data.imageID, "cubemap", e.data.height, e.data.width);
+
+
+  } else if(e.data.format === "stereo_cubemap"){
+    createTextureObject(e.data.bitmaps, e.data.imageID, "stereo_cubemap", e.data.height, e.data.width);
+  }
 }
 
 const processCubeFaces = (e) => {
