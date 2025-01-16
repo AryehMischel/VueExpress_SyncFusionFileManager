@@ -2107,3 +2107,16 @@ let fs = `
        csm_UnlitFac =  csm_UnlitFac;
   }
 `;
+
+
+function showDebugInfo(){
+  //set Collider Materials to wireframe
+  //set loggers active? set some loggers active?
+  //add stats 
+}
+
+function hideDebugInfo(){
+  //set Collider Materials to transparent
+  //disable loggers? disable some loggers?
+  //remove stats
+}
