@@ -150,7 +150,11 @@ controllers = customControllers(scene, renderer);
 
 //create interactive group
 group = new InteractiveGroup();
-group.listenToXRControllerEvents(controllers[0]);
+if(controllers.length === 2) {
+  group.listenToXRControllerEvents(controllers[1]);
+}else{
+  group.listenToXRControllerEvents(controllers[0]);
+}
 // group.listenToXRControllerEvents(controllers[1]);
 scene.add(group);
 
@@ -710,16 +714,16 @@ function customControllers(scene, renderer) {
   const controllerModelFactory = new XRControllerModelFactory();
   const handModelFactory = new XRHandModelFactory().setPath("./models/fbx/");
 
-  const lineGeometry = new BufferGeometry().setFromPoints([
-    new Vector3(0, 0, 0),
-    new Vector3(0, 0, -10),
-  ]);
+  // const lineGeometry = new BufferGeometry().setFromPoints([
+  //   new Vector3(0, 0, 0),
+  //   new Vector3(0, 0, -10),
+  // ]);
 
-  const line = new Line(
-    lineGeometry,
-    new LineBasicMaterial({ color: 0x5555ff })
-  );
-  line.renderOrder = 1;
+  // const line = new Line(
+  //   lineGeometry,
+  //   new LineBasicMaterial({ color: 0x5555ff })
+  // );
+  // line.renderOrder = 1;
 
   let controllers = [
     renderer.xr.getController(0),
@@ -736,14 +740,18 @@ function customControllers(scene, renderer) {
     const hand = renderer.xr.getHand(i);
     hand.add(handModelFactory.createHandModel(hand));
 
-    controller.add(line.clone());
+    // controller.add(line.clone());
+
+
     //update raycast line visual when intersecting with objects
-    controller.addEventListener("intersection", (e) => {
-      controller.children[0].geometry = new BufferGeometry().setFromPoints([
-        new Vector3(0, 0, 0),
-        new Vector3(0, 0, e.data),
-      ]);
-    });
+    // controller.addEventListener("intersection", (e) => {
+    //   controller.children[0].geometry = new BufferGeometry().setFromPoints([
+    //     new Vector3(0, 0, 0),
+    //     new Vector3(0, 0, e.data),
+    //   ]);
+    // });
+
+
     scene.add(controller, controllerGrip, hand);
   });
 
@@ -1841,21 +1849,26 @@ function loadInArrows() {
       const cylinderGeometry = new CylinderGeometry(0.125, 0.125, 0.125, 32);
 
       const cylinderMaterial = new MeshBasicMaterial({
-        color: 0xff0000,
-        wireframe: true,
-        // transparent: true,
-        // opacity: 0
+        // color: 0xff0000,
+        // wireframe: true,
+        transparent: true,
+        opacity: 0
       });
 
+      // x: -1.25, y: 1, z: -1.25}
+      // x: 1.5, _y: 0, _z: -1.2
+
+      // //right
+      // x: -1.5, y: 1, z: -0.5}
+      // -1.5, _y: 0, _z: 1.15
+
       interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
-      interactionMesh1.rotation.x = Math.PI / 2;
-      interactionMesh1.position.set(-1, 1, -1);
+      interactionMesh1.position.set(-1.55, 1, -0.75);
       interactionMesh1.userData.name = "rightArrow";
       interactionMesh1.userData.interactive = true; // Mark as interactive
 
       interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
-      interactionMesh2.rotation.x = Math.PI / 2;
-      interactionMesh2.position.set(1, 1, -1);
+      interactionMesh2.position.set(-1.0, 1, -1.55);
       interactionMesh2.userData.name = "leftArrow";
       interactionMesh2.userData.interactive = true; // Mark as interactive
 
@@ -1866,13 +1879,26 @@ function loadInArrows() {
       model1.rotation.z = -(Math.PI / 2);
       model1.rotation.x = Math.PI / 2;
       interactionMesh1.add(model1);
+      
 
       const model2 = gltf.scene.clone();
       model2.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
       model2.scale.set(0.25, 0.25, 0.25);
-      model2.rotation.z = Math.PI / 2;
+      model2.rotation.z = -(Math.PI / 2);
       model2.rotation.x = Math.PI / 2;
       interactionMesh2.add(model2);
+
+
+      interactionMesh1.rotation.z = 1.0
+      interactionMesh1.rotation.x = -1.5
+
+      interactionMesh2.rotation.z = -2.25
+      interactionMesh2.rotation.x = -1.5
+
+
+      // interactionMesh1.position.z = -0.5;
+      // interactionMesh1.rotation.z = -0.5;
+
 
       model1.traverse((child) => {
         if (child.isMesh) {
@@ -1899,6 +1925,9 @@ function loadInArrows() {
       });
 
       createCustomMaterial();
+
+      window.ArrowLeft = interactionMesh2;
+      window.ArrowRight = interactionMesh1; 
     },
     undefined,
     function (error) {
@@ -1919,29 +1948,33 @@ function loadInReturnArrow() {
       const cylinderGeometry = new BoxGeometry(0.1, 0.3, 0.3);
 
       const cylinderMaterial = new MeshBasicMaterial({
-        color: 0xff0000,
-        wireframe: true,
-        // opacity: 0.0,
-        // transparent: true,
+        // color: 0xff0000,
+        // wireframe: true,
+        opacity: 0.0,
+        transparent: true,
       });
 
       returnArrow = new Mesh(cylinderGeometry, cylinderMaterial);
       // returnArrow.rotation.x = Math.PI / 2;
-      returnArrow.position.set(-2, 1.4, -2);
+      returnArrow.position.set(-1.5, 1, -1.5);
       returnArrow.userData.name = "returnArrow";
       returnArrow.userData.interactive = true; // Mark as interactivereturnArrow
 
       let model = gltf.scene;
       model.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
       model.scale.set(0.1, 0.1, 0.1);
-      model.rotation.x = -(Math.PI / 2);
+      model.rotation.x = (Math.PI / 2);
+      model.rotation.z = -(Math.PI / 2);
       returnArrow.add(model);
+
+      returnArrow.rotation.y = -0.4;
       //scene.add(returnArrow);
 
       returnArrow.addEventListener("click", () => {
         swapUI();
       });
 
+      window.returnArrow = returnArrow;
 
     },
     undefined,

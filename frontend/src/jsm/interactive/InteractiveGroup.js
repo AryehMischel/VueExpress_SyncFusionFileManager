@@ -1,9 +1,40 @@
-import { Group, Raycaster, Vector2 } from "three";
+import {
+  Group,
+  Raycaster,
+  Vector2,
+  Vector3,
+  Matrix4,
+  LineBasicMaterial,
+  BufferGeometry,
+  Line,
+  color,
+} from "three";
 
 const _pointer = new Vector2();
 const _event = { type: "", data: _pointer };
 
 const _raycaster = new Raycaster();
+// const tempMatrix = new Matrix4();
+// const raycastLineMaterial = new LineBasicMaterial({ color: 0xff0000 });
+// const raycastLineGeometry = new BufferGeometry().setFromPoints([
+//   new Vector3(0, 0, 0),
+//   new Vector3(0, 0, -1),
+// ]);
+
+const lineGeometry = new BufferGeometry().setFromPoints([
+  new Vector3(0, 0, 0),
+  new Vector3(0, 0, -10),
+]);
+
+const defaultGeometry = new BufferGeometry().setFromPoints([
+  new Vector3(0, 0, 0),
+  new Vector3(0, 0, -10),
+]);
+
+let isRaycastLineDefault = true;
+
+const line = new Line(lineGeometry, new LineBasicMaterial({ color: 0x5555ff }));
+// const raycastLine = new Line(raycastLineGeometry, raycastLineMaterial);
 
 // let highlightedObject = [];
 let rightArrowHighlighted = false;
@@ -14,6 +45,7 @@ class InteractiveGroup extends Group {
 
   listenToXRControllerEvents(controller) {
     const scope = this;
+    controller.add(line.clone());
 
     // TODO: Dispatch pointerevents too
 
@@ -27,6 +59,10 @@ class InteractiveGroup extends Group {
 
     function onXRControllerEvent(event) {
       const controller = event.target;
+      // Extract the controller's position and orientation
+      //  tempMatrix.identity().extractRotation(controller.matrixWorld);
+      //  _raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      //  _raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
 
       _raycaster.setFromXRController(controller);
 
@@ -36,7 +72,6 @@ class InteractiveGroup extends Group {
         const intersection = intersections[0];
 
         const object = intersection.object;
-     
 
         if (!rightArrowHighlighted) {
           if (object.userData.name === "rightArrow") {
@@ -54,10 +89,24 @@ class InteractiveGroup extends Group {
 
         const uv = intersection.uv;
 
+        if (uv) {
+          _event.data.set(uv.x, 1 - uv.y);
+        } else {
+          _event.data.set(0, 0); // Default values if uv is undefined
+        }
         _event.type = events[event.type];
-        _event.data.set(uv.x, 1 - uv.y);
 
         object.dispatchEvent(_event);
+
+        const distance = intersection.distance;
+        controller.children[0].geometry = new BufferGeometry().setFromPoints([
+          new Vector3(0, 0, 0),
+          new Vector3(0, 0, -distance),
+        ]);
+
+        if(isRaycastLineDefault){
+          isRaycastLineDefault = false;
+        }
       } else {
         if (rightArrowHighlighted) {
           rightArrowHighlighted = false;
@@ -68,6 +117,18 @@ class InteractiveGroup extends Group {
           leftArrowHighlighted = false;
           unhighlightLeftArrow();
         }
+
+        // Reset raycast line if no intersections
+        if (!isRaycastLineDefault) {
+          controller.children[0].geometry.dispose();
+          controller.children[0].geometry = defaultGeometry.clone();
+          isRaycastLineDefault = true;
+        }
+
+        // controller.children[0].geometry = new BufferGeometry().setFromPoints([
+        //   new Vector3(0, 0, 0),
+        //   new Vector3(0, 0, -10),
+        // ]);
       }
     }
 
