@@ -293,7 +293,7 @@ function drawWebXREquirectangularLayer(layer, session, frame) {
 function drawCubeMapLayer(layer, frame) {
   let format = formats[layer.format];
   let width = layer.width;
-  let height = layer.height;
+  // let height = layer.height;
 
   if (!layer.stereo) {
     let glayer = glBinding.getSubImage(layer.layer, frame);
@@ -375,6 +375,8 @@ function onWindowResize() {
     logger.warn("Cannot change size while VR device is presenting");
   }
 }
+
+
 function createLayer(imagename) {
   let layer = layers[imagename];
   layer.createLayer();
@@ -439,12 +441,12 @@ function customSkyCamera() {
   camera.position.set(0, 0, 5); // Set the camera position to be above the ground
   camera.lookAt(new Vector3(0, 0, 0)); // Ensure the camera is looking at the origin
 
-  // Ensure the camera is looking at a specific point
-  //  camera.lookAt(new Vector3(0, 0, 0));
   return camera;
 }
 
 function setupScene(scene) {
+
+  //add lighting
   const hemLight = new HemisphereLight(0x808080, 0x606060, 4);
   const dirLight = new DirectionalLight(0xffffff, 4);
   dirLight.position.set(5, 10, 7.5);
