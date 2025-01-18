@@ -649,64 +649,6 @@ function unhighlightRightArrow() {
   rightArrowNode.material.uniforms.highlighted.value = false;
 }
 
-// function createTextureObject(bitmap, imageID, format, height, width) {
-//   if (format === "equirectangular") {
-//     const texture = new Texture(bitmap);
-//     texture.mapping = EquirectangularReflectionMapping;
-//     texture.colorSpace = SRGBColorSpace;
-//     texture.needsUpdate = true;
-//     renderer.initTexture(texture);
-//     imageManager.createImageObjectWithTexture(
-//       imageID,
-//       format,
-//       texture,
-//       height,
-//       width
-//     );
-//   } else if (format === "stereo_equirectangular") {
-//     console.log("creating stereo equirectangular texture");
-//     const texture = new Texture(bitmap);
-//     texture.mapping = EquirectangularReflectionMapping;
-//     texture.colorSpace = SRGBColorSpace;
-//     texture.needsUpdate = true;
-//     renderer.initTexture(texture);
-//     imageManager.createImageObjectWithTexture(
-//       imageID,
-//       format,
-//       texture,
-//       height,
-//       width
-//     );
-//   } else if (format === "cubemap") {
-//     const texture = new CubeTexture(bitmap);
-//     texture.flipY = false;
-//     texture.needsUpdate = true;
-//     texture.colorSpace = SRGBColorSpace;
-//     renderer.initTexture(texture);
-//     imageManager.createImageObjectWithTexture(
-//       imageID,
-//       format,
-//       texture,
-//       height,
-//       width
-//     );
-//   } else if (format === "stereo_cubemap") {
-//     const texture = new CubeTexture(bitmap);
-//     texture.flipY = false;
-//     texture.needsUpdate = true;
-//     texture.colorSpace = SRGBColorSpace;
-//     renderer.initTexture(texture);
-//     imageManager.createImageObjectWithTexture(
-//       imageID,
-//       format,
-//       texture,
-//       height,
-//       width
-//     );
-//   }
-// }
-
-// window.createTextureObject = createTextureObject;
 
 window.unhighlightLeftArrow = unhighlightLeftArrow;
 window.unhighlightRightArrow = unhighlightRightArrow;
