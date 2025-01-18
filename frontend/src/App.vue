@@ -71,22 +71,13 @@ import { logger } from "sequelize/lib/utils/logger";
 const fileManagerRef = ref(null);
 const isInitialized = ref(false);
 
-const appState = ref('Ready'); 
-const ready = ref('ReadyOrNot'); 
-const testRef = ref("sekjhglskdjfhglskdjfhg");
-const testState = reactive({
-  test: "test",
-  test2: "test2",
-});
-
 
 const onToolbarClick = (args) => {
   console.log(args);
   if (args.item.properties.text === 'customButton') {
-    // Custom action logic here
+
     console.log('Custom button clicked');
-    // hideFileManager();
-    // Add your custom method logic here
+
   }
 };
 
@@ -222,9 +213,7 @@ const fileManagerSettings = computed(() => {
   }
 });
 
-const updateReadyState = () => {
-  ready.value = 'Updated Ready State';
-};
+
 </script>
 
 <style>

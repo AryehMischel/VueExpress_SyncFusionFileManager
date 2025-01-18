@@ -50,6 +50,10 @@ import imageManager from "./three/managers/ImageManager";
 import downloadManager from "./three/managers/DownloadManager";
 import imageDisplayManager from "./three/managers/imageDisplayManager";
 import webXRStore from "./store/WebXRStore";
+import {formats} from "./three/config";
+import {vs, fs} from "./three/shaders/shaders";
+import { onWindowResize } from './three/utils/utils.js';
+import {addFileManager, hideInteractiveElements, unhideInteractiveElements} from "./three/utils/vrUtils.js";
 
 let scene,
   camera,
@@ -70,15 +74,13 @@ let rowGroup;
 let currSelectedItem = null;
 window.currSelectedItem = currSelectedItem;
 
+
 //utils
 let logger = new Logger("ThreeScene", true);
 let store;
 
-//threejs consts for gl formats
+let stats = null;
 
-let formats = {
-  astc_4x4: 37808,
-};
 
 try {
   let layersPolyfill = new WebXRLayersPolyfill();
@@ -93,9 +95,6 @@ try {
 async function initializeScene() {
   store = getMainStore();
 
-  console.log("threejs store", store);
-  let vr = store.getIsVR;
-  console.log("is vr?", vr);
   if (ASTC_EXT) {
     store.setASTC();
   }
@@ -103,6 +102,7 @@ async function initializeScene() {
     store.setETC();
   }
 
+  //inject scene and store into managers (they are instantiated before scene or store is created)
   imageManager.setScene(scene);
   imageManager.setStore();
   imageDisplayManager.setScene(scene);
@@ -111,11 +111,11 @@ async function initializeScene() {
 
 window.initializeScene = initializeScene;
 
-const stats = new Stats();
-document.body.appendChild(stats.dom);
 
 
-window.initializeScene = initializeScene;
+// const stats = new Stats();
+// document.body.appendChild(stats.dom);
+
 
 //create scene, add lights
 scene = new Scene();
@@ -134,7 +134,7 @@ renderer.setAnimationLoop(animate);
 //add event listeners for the start and end of the xr session
 renderer.xr.addEventListener("sessionstart", async () => {
   store.setImmersiveSession(true);
-  addFileManagerVR();
+  vrui = addFileManager(group);
   await new Promise((resolve) => setTimeout(resolve, 500));
   imageManager.processLayerQueue(glBinding, xrSpace);
 });
@@ -187,7 +187,9 @@ let ETC_EXT = gl.getExtension("WEBGL_compressed_texture_etc");
 //animation loop
 function animate(t, frame) {
   const xr = renderer.xr;
-  stats.update();
+  if(stats){
+    stats.update();
+  }
   const session = xr.getSession();
   xrSession = session;
   if (
@@ -322,23 +324,9 @@ function drawCompressedWebXREquirectangularLayer(layer, frame) {
   gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
-//utils  / control-flow-logic
-window.addEventListener("resize", onWindowResize, false);
-
-function onWindowResize() {
-  logger.log("resize");
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-
-  // Check if a VR session is active before resizing the renderer
-  if (!renderer.xr.isPresenting) {
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  } else {
-    logger.warn("Cannot change size while VR device is presenting");
-  }
-}
 
 
+window.addEventListener("resize", () => onWindowResize(camera, renderer, logger), false);
 //functions to create scene objects
 function customControls(camera, renderer) {
   let controls = new OrbitControls(camera, renderer.domElement);
@@ -438,68 +426,14 @@ function customControllers(scene, renderer) {
   return controllers;
 }
 
+function addStats() {
+  document.body.appendChild(stats.dom);
+}
+
 window.imageDisplayManager = imageDisplayManager;
 window.downloadManager = downloadManager;
 
 
-function addFileManager() {
-  let panel = document.getElementById("file-manager");
-  vrui = new HTMLMesh(panel);
-  vrui.position.x = -0.75;
-  vrui.position.y = 1.5;
-  vrui.position.z = -2;
-  vrui.rotation.y = Math.PI / 4;
-  vrui.scale.setScalar(4);
-  group.add(vrui);
-  window.vrui = vrui;
-}
-
-function hideFileManager() {
-  vrui.visible = false;
-  group.remove(vrui);
-}
-
-function unhideFileManager() {
-  vrui.visible = true;
-  group.add(vrui);
-}
-
-window.hideFileManager = hideFileManager;
-window.unhideFileManager = unhideFileManager;
-
-async function getRowGroup() {
-  const fileManagerGrid = document.getElementById("file-manager_grid");
-  if (fileManagerGrid) {
-    const gridContent = fileManagerGrid.querySelector(".e-gridcontent");
-    if (gridContent) {
-      const rowGroups = gridContent.querySelectorAll('[role="rowgroup"]');
-      logger.log("rowgroups: ", rowGroups.length);
-      if (rowGroups.length === 1) {
-        rowGroup = rowGroups[0];
-        window.rowGroup = rowGroup;
-        logger.log("rowGroup: ", rowGroup);
-      }
-    } else {
-      logger.error(
-        'Element with classes "e-gridcontent e-lib e-touch" not found under file-manager_grid'
-      );
-    }
-  } else {
-    logger.error('Element with id "file-manager_grid" not found');
-  }
-}
-
-window.getRowGroup = getRowGroup;
-
-function removeFileManager() {
-  group.remove(vrui);
-  vrui.geometry.dispose();
-  vrui.material.map.dispose();
-  vrui.material.dispose();
-}
-
-window.addFileManagerVR = addFileManager;
-window.removeFileManager = removeFileManager;
 
 
 
@@ -680,35 +614,17 @@ loadInReturnArrow();
 
 function swapUI() {
   if (vrui.visible) {
-    hideFileManager();
-    unhideArrows();
+    hideInteractiveElements([vrui], group);
+    unhideInteractiveElements([interactionMesh1, interactionMesh2, returnArrow], group);
   } else {
-    unhideFileManager();
-    hideArrows();
+    hideInteractiveElements([interactionMesh1, interactionMesh2, returnArrow], group);
+    unhideInteractiveElements([vrui], group);
+
   }
 }
 
 window.swapUI = swapUI;
 
-function hideArrows() {
-  group.remove(interactionMesh1);
-  group.remove(interactionMesh2);
-  group.remove(returnArrow);
-  interactionMesh1.visible = false;
-  interactionMesh2.visible = false;
-}
-
-function unhideArrows() {
-  group.add(interactionMesh1);
-  group.add(interactionMesh2);
-  group.add(returnArrow);
-  interactionMesh1.visible = true;
-  interactionMesh2.visible = true;
-  // returnArrow.visible = true;
-}
-
-window.hideArrows = hideArrows;
-window.unhideArrows = unhideArrows;
 window.loadInArrows = loadInArrows;
 
 function createCustomMaterial() {
@@ -740,45 +656,5 @@ function createCustomMaterial() {
 
 window.createCustomMaterial = createCustomMaterial;
 
-let vs = `
-  varying vec2 vUv;
-      uniform float brightness;
-  void main() {
-      vUv = uv;
-  }
-`;
-
-let fs = `
-  varying vec2 vUv;
-  uniform bool highlighted;
-
-      void main() {
-
-      if(highlighted){
-       
-      if(csm_FragColor.g > 0.5){
-        csm_FragColor = vec4(csm_FragColor.r, csm_FragColor.g, csm_FragColor.b, 1.0);
-      }else{
-         csm_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-      }
-    }else{
-    
-    csm_FragColor = csm_FragColor;
-    }
-       csm_UnlitFac =  csm_UnlitFac;
-  }
-`;
-
-function showDebugInfo() {
-  //set Collider Materials to wireframe
-  //set loggers active? set some loggers active?
-  //add stats
-}
-
-function hideDebugInfo() {
-  //set Collider Materials to transparent
-  //disable loggers? disable some loggers?
-  //remove stats
-}
 
 export { scene, renderer };
