@@ -3,7 +3,7 @@ import { renderer, scene } from '../../ThreeScene';
 import { getMainStore } from "../../store/main";
 import {CubeTextureLoader, CompressedCubeTexture, UnsignedByteType} from 'three';
 import { cdnPath, formats } from '../config';
-
+import webXRStore from "../../store/WebXRStore";
 class CubeLayer {
     constructor(srcArray, width, height, stereo, id, format) {
       this.type = "CubeMap";
@@ -21,6 +21,8 @@ class CubeLayer {
       this.scene = scene;
       this.store = getMainStore();
       console.log("cubelayer store", this.store);
+      this.glBinding = null;
+      this.xrSpace = null;
       // this.initializeTexture();
     }
   
@@ -60,7 +62,15 @@ class CubeLayer {
           lastSixUrls = null;
         } else {
           if (this.store.getImmersiveSession && !this.layer) {
-            this.createXRLayer(glBinding, xrSpace);
+
+            if(this.glBinding === null){
+              this.glBinding = webXRStore.getGLBinding();
+            }
+
+            if(this.xrSpace === null){
+              this.xrSpace = webXRStore.getXRSpace();
+            }
+            this.createXRLayer(this.glBinding, this.xrSpace);
           } else {
             const currentDirectory = this.store.currentWorkingDirectory;
             if (!imageManager.XRlayerQueue[currentDirectory]) {

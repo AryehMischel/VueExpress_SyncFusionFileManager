@@ -3,7 +3,7 @@ import { renderer, scene } from '../../ThreeScene';
 import { getMainStore } from "../../store/main";
 import {TextureLoader,EquirectangularReflectionMapping, CompressedTexture, texture, UnsignedByteType} from 'three';
 import { cdnPath, formats } from '../config';
-
+import webXRStore from '../../store/WebXRStore';
 
 
 class EquirectangularImage {
@@ -24,6 +24,7 @@ class EquirectangularImage {
       this.radius = 20;
       this.renderer = renderer;
       this.scene = scene;
+      this.store = getMainStore();
       // Validate the format parameter
       // const allowedFormats = ["astc_4x4", "ktx2", "img"];
       // if (!allowedFormats.includes(format)) {
@@ -37,6 +38,10 @@ class EquirectangularImage {
   
       // this.initializeTexture();
     }
+
+    // setStore() {
+    //     this.store = getMainStore();
+    // }
   
     async loadAllImages() {
       if (this.format === null) {
@@ -142,10 +147,19 @@ class EquirectangularImage {
         compressedTexture.needsUpdate = true;
         this.compressedTexture = compressedTexture;
   
-        if (store.getImmersiveSession && !this.layer) {
-          this.createXRLayer(glBinding, xrSpace);
+        if (this.store.getImmersiveSession && !this.layer) {
+
+          if(this.glBinding === null){
+            this.glBinding = webXRStore.getGLBinding();
+          }
+
+          if(this.xrSpace === null){
+            this.xrSpace = webXRStore.getXRSpace();
+          }
+          this.createXRLayer(this.glBinding, this.xrSpace);
+
         } else {
-          const currentDirectory = store.currentWorkingDirectory;
+          const currentDirectory = this.store.currentWorkingDirectory;
           if (!imageManager.XRlayerQueue[currentDirectory]) {
             // If it doesn't exist, create it and set it to an empty array
             imageManager.XRlayerQueue[currentDirectory] = [];
@@ -157,7 +171,7 @@ class EquirectangularImage {
       }
     }
   
-    async createXRLayer() {
+    async createXRLayer(glBinding, xrSpace) {
       this.layer = glBinding.createEquirectLayer({
         space: xrSpace,
         viewPixelWidth: this.width,

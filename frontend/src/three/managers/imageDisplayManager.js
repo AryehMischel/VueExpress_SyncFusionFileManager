@@ -1,6 +1,7 @@
 // import Logger from "../../utils/logger";
 import { getMainStore } from "../../store/main";
 
+
 class ImageDisplayManager {
   constructor() {
     if (ImageDisplayManager.instance) {

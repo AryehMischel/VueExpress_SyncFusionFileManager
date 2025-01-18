@@ -1,6 +1,7 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
 import { processImage, addImage } from "./workers/workerManager.js";
 import { getMainStore } from "./store/main";
+import imageManager from "./three/managers/ImageManager.js";
 import Logger from "./utils/logger.js";
 
 const logger = new Logger("VR_Events", true);

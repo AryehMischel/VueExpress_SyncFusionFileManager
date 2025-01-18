@@ -49,7 +49,12 @@ import { getMainStore } from "./store/main";
 import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
 import imageManager from "./three/managers/ImageManager";
 import downloadManager from "./three/managers/DownloadManager";
-import imageDisplayManager from "./three/managers/imageDisplayManager"; 
+import imageDisplayManager from "./three/managers/imageDisplayManager";
+import webXRStore from "./store/WebXRStore";
+
+// window.imageManager = imageManager;
+// window.downloadManager = downloadManager;
+// window.imageDisplayManager = imageDisplayManager;
 
 let scene,
   camera,
@@ -112,7 +117,6 @@ async function initializeScene() {
   addImageManager();
   imageDisplayManager.setScene(scene);
   imageDisplayManager.setStore();
- 
 }
 
 window.initializeScene = initializeScene;
@@ -145,7 +149,7 @@ renderer.xr.addEventListener("sessionstart", async () => {
   store.setImmersiveSession(true);
   addFileManagerVR();
   await new Promise((resolve) => setTimeout(resolve, 500));
-  imageManager.processLayerQueue();
+  imageManager.processLayerQueue(glBinding, xrSpace);
 });
 renderer.xr.addEventListener("sessionend", () =>
   store.setImmersiveSession(false)
@@ -162,9 +166,9 @@ controllers = customControllers(scene, renderer);
 
 //create interactive group
 group = new InteractiveGroup();
-if(controllers.length === 2) {
+if (controllers.length === 2) {
   group.listenToXRControllerEvents(controllers[1]);
-}else{
+} else {
   group.listenToXRControllerEvents(controllers[0]);
 }
 // group.listenToXRControllerEvents(controllers[1]);
@@ -227,6 +231,10 @@ function animate(t, frame) {
       glBinding = xr.getBinding();
       xrSpace = refSpace;
     });
+
+    webXRStore.setGLBinding(glBinding);
+    webXRStore.setXRSpace(xrSpace);
+    webXRStore.setXRSession(session);
   }
 
   //check active layers for redraw
@@ -356,10 +364,6 @@ function drawCompressedWebXREquirectangularLayer(layer, frame) {
   gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
-
-
-
-
 //utils  / control-flow-logic
 window.addEventListener("resize", onWindowResize, false);
 
@@ -375,7 +379,6 @@ function onWindowResize() {
     logger.warn("Cannot change size while VR device is presenting");
   }
 }
-
 
 function createLayer(imagename) {
   let layer = layers[imagename];
@@ -445,7 +448,6 @@ function customSkyCamera() {
 }
 
 function setupScene(scene) {
-
   //add lighting
   const hemLight = new HemisphereLight(0x808080, 0x606060, 4);
   const dirLight = new DirectionalLight(0xffffff, 4);
@@ -512,7 +514,6 @@ function customControllers(scene, renderer) {
 
     // controller.add(line.clone());
 
-
     //update raycast line visual when intersecting with objects
     // controller.addEventListener("intersection", (e) => {
     //   controller.children[0].geometry = new BufferGeometry().setFromPoints([
@@ -521,31 +522,19 @@ function customControllers(scene, renderer) {
     //   ]);
     // });
 
-
     scene.add(controller, controllerGrip, hand);
   });
 
   return controllers;
 }
 
-
-
-
-
 window.imageDisplayManager = imageDisplayManager;
 window.downloadManager = downloadManager;
 
-
-
-
 function addImageManager() {
-
   imageManager.setScene(scene);
   imageManager.setStore();
-
 }
-
-
 
 function addFileManager() {
   let panel = document.getElementById("file-manager");
@@ -660,42 +649,62 @@ function unhighlightRightArrow() {
   rightArrowNode.material.uniforms.highlighted.value = false;
 }
 
-
-
-function createTextureObject( bitmap, imageID, format, height, width) {
-  if(format === 'equirectangular'){
+function createTextureObject(bitmap, imageID, format, height, width) {
+  if (format === "equirectangular") {
     const texture = new Texture(bitmap);
     texture.mapping = EquirectangularReflectionMapping;
-    texture.colorSpace = SRGBColorSpace; 
+    texture.colorSpace = SRGBColorSpace;
     texture.needsUpdate = true;
     renderer.initTexture(texture);
-    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
-  } else if(format === 'stereo_equirectangular'){
+    imageManager.createImageObjectWithTexture(
+      imageID,
+      format,
+      texture,
+      height,
+      width
+    );
+  } else if (format === "stereo_equirectangular") {
     console.log("creating stereo equirectangular texture");
     const texture = new Texture(bitmap);
     texture.mapping = EquirectangularReflectionMapping;
-    texture.colorSpace = SRGBColorSpace; 
+    texture.colorSpace = SRGBColorSpace;
     texture.needsUpdate = true;
     renderer.initTexture(texture);
-    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
-  }else if(format === 'cubemap'){
+    imageManager.createImageObjectWithTexture(
+      imageID,
+      format,
+      texture,
+      height,
+      width
+    );
+  } else if (format === "cubemap") {
     const texture = new CubeTexture(bitmap);
-    texture.flipY = false; 
+    texture.flipY = false;
     texture.needsUpdate = true;
-    texture.colorSpace = SRGBColorSpace; 
+    texture.colorSpace = SRGBColorSpace;
     renderer.initTexture(texture);
-    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
-  }else if(format === 'stereo_cubemap'){
+    imageManager.createImageObjectWithTexture(
+      imageID,
+      format,
+      texture,
+      height,
+      width
+    );
+  } else if (format === "stereo_cubemap") {
     const texture = new CubeTexture(bitmap);
-    texture.flipY = false; 
+    texture.flipY = false;
     texture.needsUpdate = true;
-    texture.colorSpace = SRGBColorSpace; 
+    texture.colorSpace = SRGBColorSpace;
     renderer.initTexture(texture);
-    imageManager.createImageObjectWithTexture(imageID, format, texture, height, width);
+    imageManager.createImageObjectWithTexture(
+      imageID,
+      format,
+      texture,
+      height,
+      width
+    );
   }
 }
-
-
 
 window.createTextureObject = createTextureObject;
 
@@ -706,8 +715,6 @@ window.highlightRightArrow = highlightRightArrow;
 
 let interactionMesh1;
 let interactionMesh2;
-
-
 
 function loadInArrows() {
   loader.load(
@@ -720,7 +727,7 @@ function loadInArrows() {
         // color: 0xff0000,
         // wireframe: true,
         transparent: true,
-        opacity: 0
+        opacity: 0,
       });
 
       // x: -1.25, y: 1, z: -1.25}
@@ -747,7 +754,6 @@ function loadInArrows() {
       model1.rotation.z = -(Math.PI / 2);
       model1.rotation.x = Math.PI / 2;
       interactionMesh1.add(model1);
-      
 
       const model2 = gltf.scene.clone();
       model2.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
@@ -756,17 +762,14 @@ function loadInArrows() {
       model2.rotation.x = Math.PI / 2;
       interactionMesh2.add(model2);
 
+      interactionMesh1.rotation.z = 1.0;
+      interactionMesh1.rotation.x = -1.5;
 
-      interactionMesh1.rotation.z = 1.0
-      interactionMesh1.rotation.x = -1.5
-
-      interactionMesh2.rotation.z = -2.25
-      interactionMesh2.rotation.x = -1.5
-
+      interactionMesh2.rotation.z = -2.25;
+      interactionMesh2.rotation.x = -1.5;
 
       // interactionMesh1.position.z = -0.5;
       // interactionMesh1.rotation.z = -0.5;
-
 
       model1.traverse((child) => {
         if (child.isMesh) {
@@ -795,7 +798,7 @@ function loadInArrows() {
       createCustomMaterial();
 
       window.ArrowLeft = interactionMesh2;
-      window.ArrowRight = interactionMesh1; 
+      window.ArrowRight = interactionMesh1;
     },
     undefined,
     function (error) {
@@ -803,8 +806,6 @@ function loadInArrows() {
     }
   );
 }
-
-
 
 let returnArrow;
 let returnArrowPath = "https://d368ik34cg55zg.cloudfront.net/returnArrow.glb";
@@ -831,7 +832,7 @@ function loadInReturnArrow() {
       let model = gltf.scene;
       model.position.set(0, 0, 0); // Adjust position relative to the interaction mesh
       model.scale.set(0.1, 0.1, 0.1);
-      model.rotation.x = (Math.PI / 2);
+      model.rotation.x = Math.PI / 2;
       model.rotation.z = -(Math.PI / 2);
       returnArrow.add(model);
 
@@ -843,7 +844,6 @@ function loadInReturnArrow() {
       });
 
       window.returnArrow = returnArrow;
-
     },
     undefined,
     function (error) {
@@ -856,7 +856,6 @@ window.loadInReturnArrow = loadInReturnArrow;
 
 loadInArrows();
 loadInReturnArrow();
-
 
 function swapUI() {
   if (vrui.visible) {
@@ -949,17 +948,16 @@ let fs = `
   }
 `;
 
-
-function showDebugInfo(){
+function showDebugInfo() {
   //set Collider Materials to wireframe
   //set loggers active? set some loggers active?
-  //add stats 
+  //add stats
 }
 
-function hideDebugInfo(){
+function hideDebugInfo() {
   //set Collider Materials to transparent
   //disable loggers? disable some loggers?
   //remove stats
 }
 
-export {scene, renderer}
+export { scene, renderer };

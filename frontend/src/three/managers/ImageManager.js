@@ -5,6 +5,7 @@ import CubeLayer from "../layers/cubeLayer";
 import EquirectangularImage from "../layers/EqrtLayer";
 import { renderer, scene } from '../../ThreeScene';
 import { cdnPath } from '../config';
+import webXRStore from "../../store/WebXRStore";
 class ImageManager {
   constructor() {
     if (ImageManager.instance) {
@@ -102,7 +103,10 @@ class ImageManager {
         //   logger.log("removing scene background");
           this.scene.background = null;
         }
-        setLayer(this.images[name].layer);
+        if(!this.xrSession){
+          this.xrSession = webXRStore.getXRSession();
+        }
+        this.setLayer(this.images[name].layer);
       } else {
         imageDisplayManager.displayImage(this.currentImage);
         //console.log("displaying image", this.currentImage);
@@ -110,6 +114,17 @@ class ImageManager {
     } else {
     //   logger.warn(`Image ${name} not found`);
     }
+  }
+
+  
+  setLayer(layer) {
+    // let layerLength = xrSession.renderState.layers.length;
+    this.xrSession.updateRenderState({
+      layers: [
+        layer,
+        this.xrSession.renderState.layers[this.xrSession.renderState.layers.length - 1],
+      ],
+    });
   }
 
   async createImageObjects(imageData) {
@@ -250,7 +265,7 @@ class ImageManager {
     }
   }
 
-  async processLayerQueue() {
+  async processLayerQueue(glBinding, xrSpace) {
     this.ensureDependencies();
     //check current image
     console.log("creating layers via queue...");
@@ -262,7 +277,7 @@ class ImageManager {
     // }
 
     //check all images in the queue
-    let cwd = store.currentWorkingDirectory;
+    let cwd = this.store.currentWorkingDirectory;
     let layersInCWD = this.XRlayerQueue[cwd];
 
     for (let i = 0; i < layersInCWD.length; i++) {
