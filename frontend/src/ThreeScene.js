@@ -390,15 +390,15 @@ function destroyLayer(imagename) {
   layer.destroy();
 }
 
-function setLayer(layer) {
-  // let layerLength = xrSession.renderState.layers.length;
-  xrSession.updateRenderState({
-    layers: [
-      layer,
-      xrSession.renderState.layers[xrSession.renderState.layers.length - 1],
-    ],
-  });
-}
+// function setLayer(layer) {
+//   // let layerLength = xrSession.renderState.layers.length;
+//   xrSession.updateRenderState({
+//     layers: [
+//       layer,
+//       xrSession.renderState.layers[xrSession.renderState.layers.length - 1],
+//     ],
+//   });
+// }
 
 function onSessionEnd() {
   logger.log("session ended");
@@ -486,17 +486,6 @@ function customControllers(scene, renderer) {
   const controllerModelFactory = new XRControllerModelFactory();
   const handModelFactory = new XRHandModelFactory().setPath("./models/fbx/");
 
-  // const lineGeometry = new BufferGeometry().setFromPoints([
-  //   new Vector3(0, 0, 0),
-  //   new Vector3(0, 0, -10),
-  // ]);
-
-  // const line = new Line(
-  //   lineGeometry,
-  //   new LineBasicMaterial({ color: 0x5555ff })
-  // );
-  // line.renderOrder = 1;
-
   let controllers = [
     renderer.xr.getController(0),
     renderer.xr.getController(1),
@@ -512,15 +501,7 @@ function customControllers(scene, renderer) {
     const hand = renderer.xr.getHand(i);
     hand.add(handModelFactory.createHandModel(hand));
 
-    // controller.add(line.clone());
 
-    //update raycast line visual when intersecting with objects
-    // controller.addEventListener("intersection", (e) => {
-    //   controller.children[0].geometry = new BufferGeometry().setFromPoints([
-    //     new Vector3(0, 0, 0),
-    //     new Vector3(0, 0, e.data),
-    //   ]);
-    // });
 
     scene.add(controller, controllerGrip, hand);
   });
