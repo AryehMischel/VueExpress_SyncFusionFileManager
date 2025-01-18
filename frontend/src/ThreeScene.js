@@ -44,17 +44,12 @@ import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerM
 import { XRHandModelFactory } from "three/examples/jsm/webxr/XRHandModelFactory.js";
 import { KTX2Loader } from "three/examples/jsm/loaders/KTX2Loader.js";
 import Logger from "./utils/logger";
-let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 import { getMainStore } from "./store/main";
 import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
 import imageManager from "./three/managers/ImageManager";
 import downloadManager from "./three/managers/DownloadManager";
 import imageDisplayManager from "./three/managers/imageDisplayManager";
 import webXRStore from "./store/WebXRStore";
-
-// window.imageManager = imageManager;
-// window.downloadManager = downloadManager;
-// window.imageDisplayManager = imageDisplayManager;
 
 let scene,
   camera,
@@ -124,9 +119,6 @@ window.initializeScene = initializeScene;
 const stats = new Stats();
 document.body.appendChild(stats.dom);
 
-// to store WebXR Layers
-let layers = new Object();
-let activeLayers = [];
 
 window.initializeScene = initializeScene;
 
@@ -173,12 +165,6 @@ if (controllers.length === 2) {
 }
 // group.listenToXRControllerEvents(controllers[1]);
 scene.add(group);
-
-// controllers[0].addEventListener('selectstart', onSelectStart);
-// controllers[1].addEventListener('selectend', onSelectEnd);
-
-// controllers[0].addEventListener('selectstart', onSelectStart);
-// controllers[1].addEventListener('selectend', onSelectEnd);
 
 function onSelectStart(event) {
   const controller = event.target;
@@ -245,11 +231,6 @@ function animate(t, frame) {
       drawWebXRLayer(Image, session, frame);
     }
   }
-  // for (let i = 0; i < activeLayers.length; i++) {
-  //   if (activeLayers[i].layer.needsRedraw) {
-  //     drawWebXRLayer(activeLayers[i], session, frame);
-  //   }
-  // }
 
   renderer.render(scene, camera);
   controls.update();
@@ -265,13 +246,6 @@ function drawWebXRLayer(layer, session, frame) {
     drawCubeMapLayer(layer, frame);
   }
 
-  // else if (layer.type === "WebXRCubeLayer") {
-  //   drawWebXRCubeLayer(layer, session, frame);
-  // } else if (layer.type === "WebXRQuadLayer") {
-  //   drawWebXRQuadLayer(layer, session, frame);
-  // } else if (layer.type === "WebXRQuadUILayer") {
-  //   drawWebXRQuadUILayer(layer, session, frame);
-  // }
 }
 
 function drawWebXREquirectangularLayer(layer, session, frame) {
@@ -379,26 +353,6 @@ function onWindowResize() {
     logger.warn("Cannot change size while VR device is presenting");
   }
 }
-
-function createLayer(imagename) {
-  let layer = layers[imagename];
-  layer.createLayer();
-}
-
-function destroyLayer(imagename) {
-  let layer = layers[imagename];
-  layer.destroy();
-}
-
-// function setLayer(layer) {
-//   // let layerLength = xrSession.renderState.layers.length;
-//   xrSession.updateRenderState({
-//     layers: [
-//       layer,
-//       xrSession.renderState.layers[xrSession.renderState.layers.length - 1],
-//     ],
-//   });
-// }
 
 function onSessionEnd() {
   logger.log("session ended");
