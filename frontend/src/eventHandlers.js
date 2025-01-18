@@ -1,5 +1,5 @@
 import { uploadFileInfo, getPresignedUrl } from "./services/apiService.js";
-import { imageManager, StateManager } from "./ThreeScene.js";
+import imageManager from "./three/managers/ImageManager.js";
 import { processImage, addImage } from "./workers/workerManager.js";
 import Logger from "./utils/logger.js";
 import { getMainStore } from "./store/main";

@@ -47,6 +47,9 @@ import Logger from "./utils/logger";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 import { getMainStore } from "./store/main";
 import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
+import imageManager from "./three/managers/ImageManager.js";
+import downloadManager from "./three/managers/DownloadManager.js";
+import imageDisplayManager from "./three/managers/ImageDisplayManager.js"; 
 
 let scene,
   camera,
@@ -92,8 +95,10 @@ try {
   }
 }
 
-function initializeScene() {
+async function initializeScene() {
   store = getMainStore();
+
+  console.log("threejs store", store);
   let vr = store.getIsVR;
   console.log("is vr?", vr);
   if (ASTC_EXT) {
@@ -102,7 +107,14 @@ function initializeScene() {
   if (ETC_EXT) {
     store.setETC();
   }
+
+  // await new Promise((resolve) => setTimeout(resolve, 1000));
+  addImageManager();
+  imageDisplayManager.setScene(scene);
+  imageDisplayManager.setStore();
+ 
 }
+
 window.initializeScene = initializeScene;
 
 const stats = new Stats();
@@ -1185,499 +1197,510 @@ class CubeLayer {
   }
 }
 
-class EquirectangularImage {
-  constructor(srcArray, width, height, stereo, id, format, texture) {
-    this.type = "Equirectangular";
-    this.layer = null;
-    this.astcTextureData = null;
-    this.srcArray = srcArray; // Three.js equirectangular texture
-    this.astcTexture = null; // Array of ASTC textures
-    this.compressedTexture = null;
-    this.stereo = stereo;
-    this.width = width;
-    this.height = height;
-    this.texture = texture;
-    this.loaded = false;
-    this.id = id;
-    this.format = format;
-    this.radius = 20;
-    // Validate the format parameter
-    // const allowedFormats = ["astc_4x4", "ktx2", "img"];
-    // if (!allowedFormats.includes(format)) {
-    //   this.format = null;
-    //   throw new Error(
-    //     `Invalid format: ${format}. Allowed formats are: ${allowedFormats.join(
-    //       ", "
-    //     )}`
-    //   );
-    // }
+// class EquirectangularImage {
+//   constructor(srcArray, width, height, stereo, id, format, texture) {
+//     this.type = "Equirectangular";
+//     this.layer = null;
+//     this.astcTextureData = null;
+//     this.srcArray = srcArray; // Three.js equirectangular texture
+//     this.astcTexture = null; // Array of ASTC textures
+//     this.compressedTexture = null;
+//     this.stereo = stereo;
+//     this.width = width;
+//     this.height = height;
+//     this.texture = texture;
+//     this.loaded = false;
+//     this.id = id;
+//     this.format = format;
+//     this.radius = 20;
+//     // Validate the format parameter
+//     // const allowedFormats = ["astc_4x4", "ktx2", "img"];
+//     // if (!allowedFormats.includes(format)) {
+//     //   this.format = null;
+//     //   throw new Error(
+//     //     `Invalid format: ${format}. Allowed formats are: ${allowedFormats.join(
+//     //       ", "
+//     //     )}`
+//     //   );
+//     // }
 
-    // this.initializeTexture();
-  }
+//     // this.initializeTexture();
+//   }
 
-  async loadAllImages() {
-    if (this.format === null) {
-      throw new Error("Invalid format");
-      return;
-    }
-    if (this.srcArray.length < 1) {
-      throw new Error("No images to load");
-      return;
-    }
+//   async loadAllImages() {
+//     if (this.format === null) {
+//       throw new Error("Invalid format");
+//       return;
+//     }
+//     if (this.srcArray.length < 1) {
+//       throw new Error("No images to load");
+//       return;
+//     }
 
-    if (this.format === "img") {
-      await this.loadImage(this.srcArray);
-    } else if (this.format === "astc_4x4") {
-      await this.loadAstcFile(this.srcArray, this.width, this.height);
-    }
+//     if (this.format === "img") {
+//       await this.loadImage(this.srcArray);
+//     } else if (this.format === "astc_4x4") {
+//       await this.loadAstcFile(this.srcArray, this.width, this.height);
+//     }
 
-    const element = document.querySelector(`[data-image-id="${this.id}"]`);
-    if (element) {
-      let ready = element.querySelector("#defaultSpan");
-      if (ready) {
-        ready.innerHTML = "✔️";
-      }
-    } else {
-      logger.warn("No element found with imageId:", this.id);
-    }
+//     const element = document.querySelector(`[data-image-id="${this.id}"]`);
+//     if (element) {
+//       let ready = element.querySelector("#defaultSpan");
+//       if (ready) {
+//         ready.innerHTML = "✔️";
+//       }
+//     } else {
+//       logger.warn("No element found with imageId:", this.id);
+//     }
 
-    this.loaded = true;
-  }
+//     this.loaded = true;
+//   }
 
-  loadImage(url) {
-    return new Promise((resolve, reject) => {
-      let loader = new TextureLoader();
-      // loader.setPath(cdnPath + "/");
-      loader.load(
-        url,
-        (texture) => {
-          this.texture = texture;
-          this.texture.mapping = EquirectangularReflectionMapping;
-          this.texture.needsUpdate = true;
-          renderer.initTexture(this.texture);
-          resolve();
-        },
-        undefined,
-        reject
-      );
-    });
-  }
+//   loadImage(url) {
+//     return new Promise((resolve, reject) => {
+//       let loader = new TextureLoader();
+//       // loader.setPath(cdnPath + "/");
+//       loader.load(
+//         url,
+//         (texture) => {
+//           this.texture = texture;
+//           this.texture.mapping = EquirectangularReflectionMapping;
+//           this.texture.needsUpdate = true;
+//           renderer.initTexture(this.texture);
+//           resolve();
+//         },
+//         undefined,
+//         reject
+//       );
+//     });
+//   }
 
-  async loadAstcFile(url, width, height, format = 37808) {
-    console.log("loading ASTC file");
-    try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const rawData = new Uint8Array(arrayBuffer);
-      logger.log("rawData: ", rawData);
-      logger.log("rawDataLength: ", rawData.length);
+//   async loadAstcFile(url, width, height, format = 37808) {
+//     console.log("loading ASTC file");
+//     try {
+//       const response = await fetch(url);
+//       if (!response.ok) {
+//         throw new Error(`HTTP error! status: ${response.status}`);
+//       }
+//       const arrayBuffer = await response.arrayBuffer();
+//       const rawData = new Uint8Array(arrayBuffer);
+//       logger.log("rawData: ", rawData);
+//       logger.log("rawDataLength: ", rawData.length);
 
-      this.astcTextureData = new DataView(arrayBuffer, 16);
-      let astcData;
-      if (this.stereo) {
-        // ASTC header is 16 bytes, data starts after that`
-        const headerSize = 16;
-        const blockSize = 4; // 4x4 block size
-        const blockBytes = 16; // 16 bytes per block
+//       this.astcTextureData = new DataView(arrayBuffer, 16);
+//       let astcData;
+//       if (this.stereo) {
+//         // ASTC header is 16 bytes, data starts after that`
+//         const headerSize = 16;
+//         const blockSize = 4; // 4x4 block size
+//         const blockBytes = 16; // 16 bytes per block
 
-        // Calculate the number of blocks in the full image
-        const blocksPerRow = width / blockSize;
-        const blocksPerColumn = height / blockSize;
+//         // Calculate the number of blocks in the full image
+//         const blocksPerRow = width / blockSize;
+//         const blocksPerColumn = height / blockSize;
 
-        // Calculate the number of blocks in the bottom half
-        const bottomHalfBlocks = (blocksPerColumn / 2) * blocksPerRow;
+//         // Calculate the number of blocks in the bottom half
+//         const bottomHalfBlocks = (blocksPerColumn / 2) * blocksPerRow;
 
-        // Extract the bottom half data
-        const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
-        const startOffset =
-          headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
-        bottomHalfData.set(
-          rawData.subarray(startOffset, startOffset + bottomHalfData.length)
-        );
+//         // Extract the bottom half data
+//         const bottomHalfData = new Uint8Array(bottomHalfBlocks * blockBytes);
+//         const startOffset =
+//           headerSize + (blocksPerColumn / 2) * blocksPerRow * blockBytes;
+//         bottomHalfData.set(
+//           rawData.subarray(startOffset, startOffset + bottomHalfData.length)
+//         );
 
-        // Create a DataView for the bottom half data
-        astcData = new DataView(bottomHalfData.buffer);
-      } else {
-        astcData = this.astcTextureData;
-      }
+//         // Create a DataView for the bottom half data
+//         astcData = new DataView(bottomHalfData.buffer);
+//       } else {
+//         astcData = this.astcTextureData;
+//       }
 
-      let calculatedHeight = this.stereo ? height / 2 : height;
-      // Create a compressed texture
-      const compressedTexture = new CompressedTexture(
-        [{ data: astcData, width, height: this.stereo ? height / 2 : height }], // Mipmaps (can be an array of levels)
-        width,
-        this.stereo ? height / 2 : height,
-        format
-      );
+//       let calculatedHeight = this.stereo ? height / 2 : height;
+//       // Create a compressed texture
+//       const compressedTexture = new CompressedTexture(
+//         [{ data: astcData, width, height: this.stereo ? height / 2 : height }], // Mipmaps (can be an array of levels)
+//         width,
+//         this.stereo ? height / 2 : height,
+//         format
+//       );
 
-      compressedTexture.flipY = false; // Flip the texture vertically
-      compressedTexture.mapping = EquirectangularReflectionMapping;
-      compressedTexture.generateMipmaps = true;
-      compressedTexture.needsUpdate = true;
-      this.compressedTexture = compressedTexture;
+//       compressedTexture.flipY = false; // Flip the texture vertically
+//       compressedTexture.mapping = EquirectangularReflectionMapping;
+//       compressedTexture.generateMipmaps = true;
+//       compressedTexture.needsUpdate = true;
+//       this.compressedTexture = compressedTexture;
 
-      if (store.getImmersiveSession && !this.layer) {
-        this.createXRLayer(glBinding, xrSpace);
-      } else {
-        const currentDirectory = store.currentWorkingDirectory;
-        if (!imageManager.XRlayerQueue[currentDirectory]) {
-          // If it doesn't exist, create it and set it to an empty array
-          imageManager.XRlayerQueue[currentDirectory] = [];
-        }
-        imageManager.XRlayerQueue[currentDirectory].push(this.id);
-      }
-    } catch (error) {
-      console.error("Error loading ASTC file:", error);
-    }
-  }
+//       if (store.getImmersiveSession && !this.layer) {
+//         this.createXRLayer(glBinding, xrSpace);
+//       } else {
+//         const currentDirectory = store.currentWorkingDirectory;
+//         if (!imageManager.XRlayerQueue[currentDirectory]) {
+//           // If it doesn't exist, create it and set it to an empty array
+//           imageManager.XRlayerQueue[currentDirectory] = [];
+//         }
+//         imageManager.XRlayerQueue[currentDirectory].push(this.id);
+//       }
+//     } catch (error) {
+//       console.error("Error loading ASTC file:", error);
+//     }
+//   }
 
-  async createXRLayer() {
-    this.layer = glBinding.createEquirectLayer({
-      space: xrSpace,
-      viewPixelWidth: this.width,
-      viewPixelHeight: this.height / (this.stereo ? 2 : 1),
-      layout: this.stereo ? "stereo-top-bottom" : "mono",
-      colorFormat: 37808, //,            // eval(),
-      isStatic: "true",
-    });
+//   async createXRLayer() {
+//     this.layer = glBinding.createEquirectLayer({
+//       space: xrSpace,
+//       viewPixelWidth: this.width,
+//       viewPixelHeight: this.height / (this.stereo ? 2 : 1),
+//       layout: this.stereo ? "stereo-top-bottom" : "mono",
+//       colorFormat: 37808, //,            // eval(),
+//       isStatic: "true",
+//     });
 
-    this.layer.centralHorizontalAngle = Math.PI * 2;
-    this.layer.upperVerticalAngle = -Math.PI / 2.0;
-    this.layer.lowerVerticalAngle = Math.PI / 2.0;
-    this.layer.radius = this.radius;
-  }
-}
+//     this.layer.centralHorizontalAngle = Math.PI * 2;
+//     this.layer.upperVerticalAngle = -Math.PI / 2.0;
+//     this.layer.lowerVerticalAngle = Math.PI / 2.0;
+//     this.layer.radius = this.radius;
+//   }
+// }
 
-class ImageManager {
-  constructor() {
-    if (ImageManager.instance) {
-      return ImageManager.instance;
-    }
-    this.images = {};
-    this.imageOrder = []; // purely placeholder code for implementing demo. Order will have to track with syncfusion order by data
-    this.currentImageIndex = 0;
-    this.activeLayers = new Set();
-    this.currentImage = null;
-    this.XRlayerQueue = { "/": [] }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
-    ImageManager.instance = this;
-  }
+// class ImageManager {
+//   constructor() {
+//     if (ImageManager.instance) {
+//       return ImageManager.instance;
+//     }
+//     this.images = {};
+//     this.imageOrder = []; // purely placeholder code for implementing demo. Order will have to track with syncfusion order by data
+//     this.currentImageIndex = 0;
+//     this.activeLayers = new Set();
+//     this.currentImage = null;
+//     this.XRlayerQueue = { "/": [] }; //{"/": [exampleLayer1, exampleLayer2], "/other": [exampleLayer3], "/other/nested": [exampleLayer4]}
+//     ImageManager.instance = this;
+//   }
 
-  addImage(name, imageInstance) {
-    this.images[name] = imageInstance;
-    this.imageOrder.push(name);
-    downloadManager.addToQueue(imageInstance);
-  }
+//   addImage(name, imageInstance) {
+//     this.images[name] = imageInstance;
+//     this.imageOrder.push(name);
+//     downloadManager.addToQueue(imageInstance);
+//   }
 
-  selectNextImage() {
-    if (this.imageOrder.length === 0) {
-      return;
-    }
-    if (this.currentImageIndex < this.imageOrder.length - 1) {
-      this.currentImageIndex++;
-    } else {
-      this.currentImageIndex = 0;
-    }
+//   selectNextImage() {
+//     if (this.imageOrder.length === 0) {
+//       return;
+//     }
+//     if (this.currentImageIndex < this.imageOrder.length - 1) {
+//       this.currentImageIndex++;
+//     } else {
+//       this.currentImageIndex = 0;
+//     }
 
-    console.log("current image index", this.currentImageIndex);
-    console.log("curr image", this.imageOrder[this.currentImageIndex]);
-    this.selectImage(this.imageOrder[this.currentImageIndex]);
-  }
+//     console.log("current image index", this.currentImageIndex);
+//     console.log("curr image", this.imageOrder[this.currentImageIndex]);
+//     this.selectImage(this.imageOrder[this.currentImageIndex]);
+//   }
 
-  selectPreviousImage() {
-    if (this.imageOrder.length === 0) {
-      return;
-    }
-    if (this.currentImageIndex > 0) {
-      this.currentImageIndex--;
-    } else {
-      this.currentImageIndex = this.imageOrder.length - 1;
-    }
-    this.selectImage(this.imageOrder[this.currentImageIndex]);
-  }
+//   selectPreviousImage() {
+//     if (this.imageOrder.length === 0) {
+//       return;
+//     }
+//     if (this.currentImageIndex > 0) {
+//       this.currentImageIndex--;
+//     } else {
+//       this.currentImageIndex = this.imageOrder.length - 1;
+//     }
+//     this.selectImage(this.imageOrder[this.currentImageIndex]);
+//   }
 
-  removeImage(name) {
-    delete this.images[name];
-  }
+//   removeImage(name) {
+//     delete this.images[name];
+//   }
 
-  selectImage(name) {
-    if (this.images[name]) {
-      this.currentImage = this.images[name];
+//   selectImage(name) {
+//     if (this.images[name]) {
+//       this.currentImage = this.images[name];
 
-      console.log("is Immersive Session?", store.getImmersiveSession);
-      console.log("has Layer?", this.images[name].layer);
+//       console.log("is Immersive Session?", store.getImmersiveSession);
+//       console.log("has Layer?", this.images[name].layer);
 
-      if (store.getImmersiveSession && this.images[name].layer) {
-        if (!this.activeLayers.has(name)) {
-          this.activeLayers.add(name);
-        }
-        if (scene.background) {
-          logger.log("removing scene background");
-          scene.background = null;
-        }
-        setLayer(this.images[name].layer);
-      } else {
-        imageDisplayManager.displayImage(this.currentImage);
-      }
-    } else {
-      logger.warn(`Image ${name} not found`);
-    }
-  }
+//       if (store.getImmersiveSession && this.images[name].layer) {
+//         if (!this.activeLayers.has(name)) {
+//           this.activeLayers.add(name);
+//         }
+//         if (scene.background) {
+//           logger.log("removing scene background");
+//           scene.background = null;
+//         }
+//         setLayer(this.images[name].layer);
+//       } else {
+//         imageDisplayManager.displayImage(this.currentImage);
+//       }
+//     } else {
+//       logger.warn(`Image ${name} not found`);
+//     }
+//   }
 
-  async createImageObjects(imageData) {
-    if (imageData.groupId in this.images) {
-      if (store.getImmersiveSession && !this.images[imageData.groupId].layer) {
-        console.log("creating layer for existing image");
-        this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
-      }
+//   async createImageObjects(imageData) {
+//     if (imageData.groupId in this.images) {
+//       if (store.getImmersiveSession && !this.images[imageData.groupId].layer) {
+//         console.log("creating layer for existing image");
+//         this.images[imageData.groupId].createXRLayer(glBinding, xrSpace);
+//       }
 
-      logger.log("image already exists");
+//       logger.log("image already exists");
 
-      if (this.images[imageData.groupId].texture) {
-        const element = document.querySelector(
-          `[data-image-id="${imageData.groupId}"]`
-        );
-        if (element) {
-          let ready = element.querySelector("#defaultSpan");
-          if (ready) {
-            ready.innerHTML = "✔️";
-          }
-        } else {
-          logger.warn("No element found with imageId:", imageData.groupId);
-        }
-      }
+//       if (this.images[imageData.groupId].texture) {
+//         const element = document.querySelector(
+//           `[data-image-id="${imageData.groupId}"]`
+//         );
+//         if (element) {
+//           let ready = element.querySelector("#defaultSpan");
+//           if (ready) {
+//             ready.innerHTML = "✔️";
+//           }
+//         } else {
+//           logger.warn("No element found with imageId:", imageData.groupId);
+//         }
+//       }
 
-      return;
-    }
+//       return;
+//     }
 
-    // logger.log("creating image objects");
-    if (imageData.format_360 === "equirectangular") {
-      let imageArr = JSON.parse(imageData.faces);
-      let url = `${cdnPath}/${imageArr[0]}`;
-      let equirectangularImage = new EquirectangularImage(
-        url,
-        imageData.width,
-        imageData.height,
-        false,
-        imageData.groupId,
-        imageData.textureFormat
-      );
-      this.addImage(imageData.groupId, equirectangularImage);
-    } else if (imageData.format_360 === "stereo_equirectangular") {
-      let imageArr = JSON.parse(imageData.faces);
-      let url = `${cdnPath}/${imageArr[0]}`;
-      let equirectangularImage = new EquirectangularImage(
-        url,
-        imageData.width,
-        imageData.height,
-        true,
-        imageData.groupId,
-        imageData.textureFormat
-      );
-      this.addImage(imageData.groupId, equirectangularImage);
-    } else if (imageData.format_360 === "cubemap") {
-      logger.log("creating cubemap of type", imageData.textureFormat);
-      let faces = JSON.parse(imageData.faces);
-      let cubeLayer = new CubeLayer(
-        faces,
-        imageData.width,
-        imageData.height,
-        false,
-        imageData.groupId,
-        imageData.textureFormat
-      );
-      this.addImage(imageData.groupId, cubeLayer);
-    } else if (imageData.format_360 === "stereo_cubemap") {
-      logger.log("creating cubemap of type", imageData.textureFormat);
-      let faces = JSON.parse(imageData.faces);
-      let cubeLayer = new CubeLayer(
-        faces,
-        imageData.width,
-        imageData.height,
-        true,
-        imageData.groupId,
-        imageData.textureFormat
-      );
+//     // logger.log("creating image objects");
+//     if (imageData.format_360 === "equirectangular") {
+//       let imageArr = JSON.parse(imageData.faces);
+//       let url = `${cdnPath}/${imageArr[0]}`;
+//       let equirectangularImage = new EquirectangularImage(
+//         url,
+//         imageData.width,
+//         imageData.height,
+//         false,
+//         imageData.groupId,
+//         imageData.textureFormat
+//       );
+//       this.addImage(imageData.groupId, equirectangularImage);
+//     } else if (imageData.format_360 === "stereo_equirectangular") {
+//       let imageArr = JSON.parse(imageData.faces);
+//       let url = `${cdnPath}/${imageArr[0]}`;
+//       let equirectangularImage = new EquirectangularImage(
+//         url,
+//         imageData.width,
+//         imageData.height,
+//         true,
+//         imageData.groupId,
+//         imageData.textureFormat
+//       );
+//       this.addImage(imageData.groupId, equirectangularImage);
+//     } else if (imageData.format_360 === "cubemap") {
+//       logger.log("creating cubemap of type", imageData.textureFormat);
+//       let faces = JSON.parse(imageData.faces);
+//       let cubeLayer = new CubeLayer(
+//         faces,
+//         imageData.width,
+//         imageData.height,
+//         false,
+//         imageData.groupId,
+//         imageData.textureFormat
+//       );
+//       this.addImage(imageData.groupId, cubeLayer);
+//     } else if (imageData.format_360 === "stereo_cubemap") {
+//       logger.log("creating cubemap of type", imageData.textureFormat);
+//       let faces = JSON.parse(imageData.faces);
+//       let cubeLayer = new CubeLayer(
+//         faces,
+//         imageData.width,
+//         imageData.height,
+//         true,
+//         imageData.groupId,
+//         imageData.textureFormat
+//       );
 
-      this.addImage(imageData.groupId, cubeLayer);
+//       this.addImage(imageData.groupId, cubeLayer);
 
-    }
-  }
+//     }
+//   }
 
-  async createImageObjectWithTexture(id, format_360, texture, height, width) {
-    if(format_360 === 'equirectangular'){
-      let equirectangularImage = new EquirectangularImage(
-        null,
-        width,
-        height,
-        false,
-        id,
-        1023, //bitmap srgb data
-        texture
-      );
-      equirectangularImage.loaded = true;
-      this.images[id] = equirectangularImage;
-      this.imageOrder.push(id);
+//   async createImageObjectWithTexture(id, format_360, texture, height, width) {
+//     if(format_360 === 'equirectangular'){
+//       let equirectangularImage = new EquirectangularImage(
+//         null,
+//         width,
+//         height,
+//         false,
+//         id,
+//         1023, //bitmap srgb data
+//         texture
+//       );
+//       equirectangularImage.loaded = true;
+//       this.images[id] = equirectangularImage;
+//       this.imageOrder.push(id);
       
-    } else if(format_360 === 'stereo_equirectangular'){
-      let equirectangularImage = new EquirectangularImage(
-        null,
-        width,
-        height,
-        true,
-        id,
-        1023, //bitmap srgb data
-        texture
-      );
-      console.log("STEREO EQUIRECTANGULAR IMAGE CREATED", equirectangularImage);
-      equirectangularImage.loaded = true;
-      this.images[id] = equirectangularImage;
-      this.imageOrder.push(id);
+//     } else if(format_360 === 'stereo_equirectangular'){
+//       let equirectangularImage = new EquirectangularImage(
+//         null,
+//         width,
+//         height,
+//         true,
+//         id,
+//         1023, //bitmap srgb data
+//         texture
+//       );
+//       console.log("STEREO EQUIRECTANGULAR IMAGE CREATED", equirectangularImage);
+//       equirectangularImage.loaded = true;
+//       this.images[id] = equirectangularImage;
+//       this.imageOrder.push(id);
 
-    } else if(format_360 === 'cubemap'){
-      let cubeLayer = new CubeLayer(
-        null,
-        width,
-        height,
-        false,
-        id,
-        1023 //bitmap srgb data
-      );
-      cubeLayer.texture = texture;
-      cubeLayer.loaded = true;
-      this.images[id] = cubeLayer;
-      this.imageOrder.push(id);
-    } else if(format_360 === 'stereo_cubemap'){
-      let cubeLayer = new CubeLayer(
-        null,
-        width,
-        height,
-        true,
-        id,
-        1023 //bitmap srgb data
-      );
-      cubeLayer.texture = texture;
-      cubeLayer.loaded = true;
-      this.images[id] = cubeLayer;
-      this.imageOrder.push(id);
+//     } else if(format_360 === 'cubemap'){
+//       let cubeLayer = new CubeLayer(
+//         null,
+//         width,
+//         height,
+//         false,
+//         id,
+//         1023 //bitmap srgb data
+//       );
+//       cubeLayer.texture = texture;
+//       cubeLayer.loaded = true;
+//       this.images[id] = cubeLayer;
+//       this.imageOrder.push(id);
+//     } else if(format_360 === 'stereo_cubemap'){
+//       let cubeLayer = new CubeLayer(
+//         null,
+//         width,
+//         height,
+//         true,
+//         id,
+//         1023 //bitmap srgb data
+//       );
+//       cubeLayer.texture = texture;
+//       cubeLayer.loaded = true;
+//       this.images[id] = cubeLayer;
+//       this.imageOrder.push(id);
 
-    }
-  }
+//     }
+//   }
 
-  async processLayerQueue() {
-    //check current image
-    console.log("creating layers via queue...");
-    // if (this.currentImage) {
-    //   if (!this.currentImage.layer) {
-    //     await this.currentImage.createXRLayer(glBinding, xrSpace);
-    //     // this.selectImage(this.currentImage.id);
-    //   }
-    // }
+//   async processLayerQueue() {
+//     //check current image
+//     console.log("creating layers via queue...");
+//     // if (this.currentImage) {
+//     //   if (!this.currentImage.layer) {
+//     //     await this.currentImage.createXRLayer(glBinding, xrSpace);
+//     //     // this.selectImage(this.currentImage.id);
+//     //   }
+//     // }
 
-    //check all images in the queue
-    let cwd = store.currentWorkingDirectory;
-    let layersInCWD = this.XRlayerQueue[cwd];
+//     //check all images in the queue
+//     let cwd = store.currentWorkingDirectory;
+//     let layersInCWD = this.XRlayerQueue[cwd];
 
-    for (let i = 0; i < layersInCWD.length; i++) {
-      if (!this.images[layersInCWD[i]].layer) {
-        this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
-        // this.activeLayers.add(layersInCWD[i]);
-      }
-    }
+//     for (let i = 0; i < layersInCWD.length; i++) {
+//       if (!this.images[layersInCWD[i]].layer) {
+//         this.images[layersInCWD[i]].createXRLayer(glBinding, xrSpace);
+//         // this.activeLayers.add(layersInCWD[i]);
+//       }
+//     }
 
-    console.log("processing layer queue");
-  }
-}
+//     console.log("processing layer queue");
+//   }
+// }
 
-class ImageDisplayManager {
-  constructor(scene) {
-    this.scene = scene;
-  }
+// class ImageDisplayManager {
+//   constructor(scene) {
+//     this.scene = scene;
+//   }
 
-  displayImage(image) {
-    logger.log("displaying image");
-    if (store.supportsASTC) {
-      logger.log("supports ASTC");
-      if (image.compressedTexture) {
-        this.scene.background = image.compressedTexture;
-      } else {
-        logger.log("no compressed texture found");
-        if (image.texture) {
-          this.scene.background = image.texture;
-        } else {
-          logger.log("no alt texture found");
-        }
-      }
-    } else {
-      logger.log("image", image);
-      if (image.texture) {
-        this.scene.background = image.texture;
-      } else {
-        logger.log("no texture found");
-      }
-    }
-    // if (store.isVR) {
-    //   image.createXRLayer(glBinding, xrSpace);
-    // } else {
-    //   this.scene.background = image.texture;
-    // }
-  }
-}
+//   displayImage(image) {
+//     logger.log("displaying image");
+//     if (store.supportsASTC) {
+//       logger.log("supports ASTC");
+//       if (image.compressedTexture) {
+//         this.scene.background = image.compressedTexture;
+//       } else {
+//         logger.log("no compressed texture found");
+//         if (image.texture) {
+//           this.scene.background = image.texture;
+//         } else {
+//           logger.log("no alt texture found");
+//         }
+//       }
+//     } else {
+//       logger.log("image", image);
+//       if (image.texture) {
+//         this.scene.background = image.texture;
+//       } else {
+//         logger.log("no texture found");
+//       }
+//     }
+//     // if (store.isVR) {
+//     //   image.createXRLayer(glBinding, xrSpace);
+//     // } else {
+//     //   this.scene.background = image.texture;
+//     // }
+//   }
+// }
 
-class DownloadManager {
-  constructor() {
-    this.queue = [];
-    this.activeDownloads = 0;
-    this.maxConcurrentDownloads = 3; // Adjust as needed
-  }
+// class DownloadManager {
+//   constructor() {
+//     this.queue = [];
+//     this.activeDownloads = 0;
+//     this.maxConcurrentDownloads = 3; // Adjust as needed
+//   }
 
-  addToQueue(imageInstance) {
-    logger.log(imageInstance, "added to queue");
-    this.queue.push(imageInstance);
-    this.processQueue();
-  }
+//   addToQueue(imageInstance) {
+//     logger.log(imageInstance, "added to queue");
+//     this.queue.push(imageInstance);
+//     this.processQueue();
+//   }
 
-  prioritizeDownload(imageInstance) {
-    // Move the prioritized image to the front of the queue
-    this.queue = this.queue.filter((item) => item !== imageInstance);
-    this.queue.unshift(imageInstance);
-    this.processQueue();
-  }
+//   prioritizeDownload(imageInstance) {
+//     // Move the prioritized image to the front of the queue
+//     this.queue = this.queue.filter((item) => item !== imageInstance);
+//     this.queue.unshift(imageInstance);
+//     this.processQueue();
+//   }
 
-  processQueue() {
-    while (
-      this.activeDownloads < this.maxConcurrentDownloads &&
-      this.queue.length > 0
-    ) {
-      logger.log("processing next item in queue");
-      const imageInstance = this.queue.shift();
-      this.activeDownloads++;
-      imageInstance
-        .loadAllImages()
-        .then(() => {
-          this.activeDownloads--;
-          this.processQueue();
-        })
-        .catch(() => {
-          this.activeDownloads--;
-          this.processQueue();
-        });
-    }
-  }
-}
+//   processQueue() {
+//     while (
+//       this.activeDownloads < this.maxConcurrentDownloads &&
+//       this.queue.length > 0
+//     ) {
+//       logger.log("processing next item in queue");
+//       const imageInstance = this.queue.shift();
+//       this.activeDownloads++;
+//       imageInstance
+//         .loadAllImages()
+//         .then(() => {
+//           this.activeDownloads--;
+//           this.processQueue();
+//         })
+//         .catch(() => {
+//           this.activeDownloads--;
+//           this.processQueue();
+//         });
+//     }
+//   }
+// }
 
-const downloadManager = new DownloadManager();
-const imageDisplayManager = new ImageDisplayManager(scene);
-const imageManager = new ImageManager();
-window.imageManager = imageManager;
+// const downloadManager = new downloadManager();
+// const imageDisplayManager = new ImageDisplayManager(scene);
+
 window.imageDisplayManager = imageDisplayManager;
 window.downloadManager = downloadManager;
 
-export { imageManager };
+// export { imageManager };
 
 // VR UI
+
+
+
+
+function addImageManager() {
+
+  imageManager.setScene(scene);
+  imageManager.setStore();
+
+}
+
+
 
 function addFileManager() {
   let panel = document.getElementById("file-manager");
@@ -1989,33 +2012,6 @@ window.loadInReturnArrow = loadInReturnArrow;
 loadInArrows();
 loadInReturnArrow();
 
-function addInteractiveBox() {
-  let geometry = new BoxGeometry(1, 1, 1);
-  let material = new MeshBasicMaterial({ color: 0x00ff00 });
-  let cube = new Mesh(geometry, material);
-  cube.position.set(0, 0, -3);
-  cube.name = "interactiveCube";
-  group.add(cube);
-  cube.addEventListener("click", () => {
-    console.log("clicked on cube");
-  });
-
-  cube.addEventListener("hoveron", () => {
-    console.log("hovered on cube");
-  });
-
-  cube.addEventListener("hoveroff", () => {
-    console.log("hovered off cube");
-  });
-
-  cube.addEventListener("selectstart", () => {
-    console.log("selectstart on cube");
-  });
-
-  cube.addEventListener("selectend", () => {
-    console.log("selectend on cube");
-  });
-}
 
 function swapUI() {
   if (vrui.visible) {
@@ -2120,3 +2116,5 @@ function hideDebugInfo(){
   //disable loggers? disable some loggers?
   //remove stats
 }
+
+export {scene, renderer}
