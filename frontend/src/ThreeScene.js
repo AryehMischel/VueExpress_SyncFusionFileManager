@@ -47,9 +47,9 @@ import Logger from "./utils/logger";
 let cdnPath = "https://d1w8hynvb3moja.cloudfront.net";
 import { getMainStore } from "./store/main";
 import { GLTFLoader } from "./jsm/loaders/GLTFLoader.js";
-import imageManager from "./three/managers/ImageManager.js";
-import downloadManager from "./three/managers/DownloadManager.js";
-import imageDisplayManager from "./three/managers/ImageDisplayManager.js"; 
+import imageManager from "./three/managers/ImageManager";
+import downloadManager from "./three/managers/DownloadManager";
+import imageDisplayManager from "./three/managers/imageDisplayManager"; 
 
 let scene,
   camera,
