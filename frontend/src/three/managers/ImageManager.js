@@ -6,6 +6,8 @@ import EquirectangularImage from "../layers/EqrtLayer";
 import { renderer, scene } from '../../ThreeScene';
 import { cdnPath } from '../config';
 import webXRStore from "../../store/WebXRStore";
+import { Texture, CubeTexture, EquirectangularReflectionMapping, SRGBColorSpace } from 'three';
+
 class ImageManager {
   constructor() {
     if (ImageManager.instance) {
@@ -206,6 +208,64 @@ class ImageManager {
       this.addImage(imageData.groupId, cubeLayer);
     }
   }
+
+  createTextureObject(bitmap, imageID, format, height, width) {
+    if (format === "equirectangular") {
+      const texture = new Texture(bitmap);
+      texture.mapping = EquirectangularReflectionMapping;
+      texture.colorSpace = SRGBColorSpace;
+      texture.needsUpdate = true;
+      renderer.initTexture(texture);
+      this.createImageObjectWithTexture(
+        imageID,
+        format,
+        texture,
+        height,
+        width
+      );
+    } else if (format === "stereo_equirectangular") {
+      console.log("creating stereo equirectangular texture");
+      const texture = new Texture(bitmap);
+      texture.mapping = EquirectangularReflectionMapping;
+      texture.colorSpace = SRGBColorSpace;
+      texture.needsUpdate = true;
+      renderer.initTexture(texture);
+      this.createImageObjectWithTexture(
+        imageID,
+        format,
+        texture,
+        height,
+        width
+      );
+    } else if (format === "cubemap") {
+      const texture = new CubeTexture(bitmap);
+      texture.flipY = false;
+      texture.needsUpdate = true;
+      texture.colorSpace = SRGBColorSpace;
+      renderer.initTexture(texture);
+      this.createImageObjectWithTexture(
+        imageID,
+        format,
+        texture,
+        height,
+        width
+      );
+    } else if (format === "stereo_cubemap") {
+      const texture = new CubeTexture(bitmap);
+      texture.flipY = false;
+      texture.needsUpdate = true;
+      texture.colorSpace = SRGBColorSpace;
+      renderer.initTexture(texture);
+      this.createImageObjectWithTexture(
+        imageID,
+        format,
+        texture,
+        height,
+        width
+      );
+    }
+  }
+  
 
   async createImageObjectWithTexture(id, format_360, texture, height, width) {
     this.ensureDependencies();

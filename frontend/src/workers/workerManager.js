@@ -3,10 +3,12 @@ import { updateImageFormat, getPresignedUrl } from "../services/apiService.js";
 import Logger from "../utils/logger.js";
 import axios from "axios";
 import { getMainStore } from "../store/main";
+import imageManager from "../three/managers/ImageManager.js";
 const workerCount = 4;
 const workers = [];
 const workerStatus = new Array(workerCount).fill(false); // Track worker availability
 const images = {};
+
 let store;
 // Create different loggers for different file groups
 const logger = new Logger("workerManager", true);
@@ -107,17 +109,17 @@ const handleFormatDetection = async (e) => {
 const handleProcessedTextures = async (e) => {
   logger.log("handle processed textures");
   if(e.data.format === "equirectangular"){
-    createTextureObject(e.data.bitmap, e.data.imageID, "equirectangular", e.data.height, e.data.width);
+    imageManager.createTextureObject(e.data.bitmap, e.data.imageID, "equirectangular", e.data.height, e.data.width);
  
   }else if(e.data.format === "stereo_equirectangular"){
-    createTextureObject(e.data.subBitmap, e.data.imageID, "stereo_equirectangular", e.data.height, e.data.width);
+    imageManager.createTextureObject(e.data.subBitmap, e.data.imageID, "stereo_equirectangular", e.data.height, e.data.width);
  
   } else if(e.data.format === "cubemap"){
-    createTextureObject(e.data.bitmaps, e.data.imageID, "cubemap", e.data.height, e.data.width);
+    imageManager.createTextureObject(e.data.bitmaps, e.data.imageID, "cubemap", e.data.height, e.data.width);
 
 
   } else if(e.data.format === "stereo_cubemap"){
-    createTextureObject(e.data.bitmaps, e.data.imageID, "stereo_cubemap", e.data.height, e.data.width);
+    imageManager.createTextureObject(e.data.bitmaps, e.data.imageID, "stereo_cubemap", e.data.height, e.data.width);
   }
 }
 
