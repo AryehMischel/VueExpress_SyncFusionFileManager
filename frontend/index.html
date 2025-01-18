@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + Vue</title>
+    <link
+      rel="stylesheet"
+      href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css"
+    />
+    <style>
+      /* body { */
+        /* max-width: 100vw;
+        max-height: 100vh; */
+/* 
+        overflow-x: hidden;
+        overflow-y: hidden; */
+      /* } */
+
+    </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+  <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+            "three/addons/": "./src/jsm/"
+        }
+    }
+</script>  
+</head>
+  <body>
+    <div id = "settings"></div>
+    <div id="app" style="position: absolute;"></div>
+    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="/src/ThreeScene.js"></script>
+
+  </body>
+
+</html>
+<script>
+
+</script>
+
+<script>
+
+  // Ensure that the function is called after the file manager is initialized
+window.addEventListener('load', () => {
+  if (window.addProgressBar) {
+    window.addProgressBar();
+  }
+});
+    const panel = $("#app").draggable();
+    console.log("panel", panel);
+    const snapThreshold = 10; // pixels from edge to trigger snap
+
+    panel.draggable({
+
+      handle: "#file-manager_toolbar",
+      containment: "window", // Keep panel within window bounds
+      start: function () {
+        $(this).css("transform", "none");
+      },
+      stop: function (event, ui) {
+        const window_width = $(window).width();
+        const window_height = $(window).height();
+        const panel_width = panel.innerWidth();
+        const panel_height = panel.innerHeight();
+
+      },
+    });
+
+
+</script>
