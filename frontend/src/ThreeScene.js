@@ -62,12 +62,7 @@ let scene,
   glBinding,
   xrSpace,
   xrSession;
-let vrMode = false;
-window.vrMode = vrMode;
 
-let IShighlighted = false;
-
-window.GlobalHighlight = IShighlighted;
 
 //vr ui stuff
 let vrui;
