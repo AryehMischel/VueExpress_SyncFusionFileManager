@@ -108,8 +108,8 @@ async function initializeScene() {
     store.setETC();
   }
 
-  // await new Promise((resolve) => setTimeout(resolve, 1000));
-  addImageManager();
+  imageManager.setScene(scene);
+  imageManager.setStore();
   imageDisplayManager.setScene(scene);
   imageDisplayManager.setStore();
 }
@@ -143,6 +143,8 @@ renderer.xr.addEventListener("sessionstart", async () => {
   await new Promise((resolve) => setTimeout(resolve, 500));
   imageManager.processLayerQueue(glBinding, xrSpace);
 });
+
+
 renderer.xr.addEventListener("sessionend", () =>
   store.setImmersiveSession(false)
 );
@@ -186,19 +188,6 @@ gl = renderer.getContext();
 //get webgl compressed texture extensions
 let ASTC_EXT = gl.getExtension("WEBGL_compressed_texture_astc");
 let ETC_EXT = gl.getExtension("WEBGL_compressed_texture_etc");
-
-if (ASTC_EXT) {
-  logger.log("ASTC_EXT", ASTC_EXT);
-  // store.supportsASTC = true;
-} else {
-  logger.log("no astc");
-  // store.supportsASTC = false;
-}
-if (ETC_EXT) {
-  logger.log("ETC_EXT", ETC_EXT);
-} else {
-  logger.log("no etc");
-}
 
 //animation loop
 function animate(t, frame) {
@@ -354,15 +343,6 @@ function onWindowResize() {
   }
 }
 
-function onSessionEnd() {
-  logger.log("session ended");
-  //remove layers?
-}
-
-function onSessionStart() {
-  logger.log("session started");
-  // createQuadIU()
-}
 
 //functions to create scene objects
 function customControls(camera, renderer) {
@@ -466,10 +446,6 @@ function customControllers(scene, renderer) {
 window.imageDisplayManager = imageDisplayManager;
 window.downloadManager = downloadManager;
 
-function addImageManager() {
-  imageManager.setScene(scene);
-  imageManager.setStore();
-}
 
 function addFileManager() {
   let panel = document.getElementById("file-manager");
