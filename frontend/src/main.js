@@ -1,6 +1,7 @@
 import { createApp } from 'vue';
 import App from './App.vue';
 import Settings from './Settings.vue';
+import AlbumComponent from './components/AlbumComponent.vue';
 import router from './router/index.js'; // Import the router
 import pinia from './store';
 import './style.css';
