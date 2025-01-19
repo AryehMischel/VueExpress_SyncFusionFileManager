@@ -18,6 +18,9 @@ import fileManagerRoutes from "./routes/fileManagerRoutes.js";
 import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/auth.js";
 import s3Routes from "./routes/s3Routes.js";
+import albumRoutes from "./routes/albumRoutes.js"
+// import album from "./routes/album.js"
+
 
 
 
@@ -94,6 +97,8 @@ app.get('/blocked', (req, res) => {
 
 app.use('/auth', authRoutes);
 
+// app.use('/', album);
+app.use('/album', albumRoutes);
 
 // Apply authentication middleware to the base path
 app.use(ensureAuthenticated);

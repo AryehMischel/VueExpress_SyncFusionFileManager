@@ -18,6 +18,7 @@ export const getImagesTest = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 export const handleFileManagerActions = (req, res) => {
   const userId = req.user.userId;
   const { action, path, filterPath, name } = req.body;
