@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: './', // Set the base URL
+  base: '/', // Set the base URL
   build: {
     
     outDir: '../backend/public/dist', // Build output directory

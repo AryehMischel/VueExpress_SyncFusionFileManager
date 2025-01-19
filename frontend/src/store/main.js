@@ -16,6 +16,7 @@ export const useMainStore = defineStore('main', {
     progressValues: {},
     processImagesInBrowserSetting: false,
     processClientSide: false,
+    isAlbum: false,
     // Add other global state properties here
   }),
   actions: {
@@ -46,6 +47,9 @@ export const useMainStore = defineStore('main', {
     }, 
     setProcessClientSide(value) {
       this.processClientSide = value;
+    },
+    setAlbum(value){
+      this.isAlbum = value
     }
 
     // Add other actions here
@@ -62,6 +66,7 @@ export const useMainStore = defineStore('main', {
       return state.progressValues[id] > 0 && state.progressValues[id] < 100;
     },
     getProcessClientSide: (state) => state.processClientSide,
+    getIsAlbum: (state) => state.isAlbum,
    
     // Add other getters here
   }

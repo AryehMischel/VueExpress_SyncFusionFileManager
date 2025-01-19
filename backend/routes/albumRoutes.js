@@ -21,4 +21,20 @@ router.post("/remove", (req, res) => {
   res.send("Image removed from album");
 });
 
+router.post("/actions", (req, res)=>{
+    console.log("handling album actions")
+    res.json({
+        cwd: {
+          name: "Root",
+          size: 0,
+          dateModified: new Date().toISOString(),
+          type: "directory",
+          isFile: false,
+          hasChild: null,
+          filterPath: "/",
+        },
+        files: [],
+      });
+    
+}); 
 export default router;

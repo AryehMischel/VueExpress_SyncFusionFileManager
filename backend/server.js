@@ -19,7 +19,7 @@ import indexRoutes from "./routes/index.js";
 import authRoutes from "./routes/auth.js";
 import s3Routes from "./routes/s3Routes.js";
 import albumRoutes from "./routes/albumRoutes.js"
-// import album from "./routes/album.js"
+import album from "./routes/album.js"
 
 
 
@@ -86,6 +86,9 @@ connectToDatabase2();
 // app.get('/blocked', (req, res) => {
 //   res.sendFile(join(__dirname, 'public', 'blocked.html'));
 // });
+
+app.use(express.static(path.join(__dirname, "public")));
+
 app.get('/signin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'signin.html'));
 });
@@ -97,8 +100,22 @@ app.get('/blocked', (req, res) => {
 
 app.use('/auth', authRoutes);
 
-// app.use('/', album);
+// // app.use('/', album);
 app.use('/album', albumRoutes);
+
+app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public/dist")));
+
+
+// app.get('/albums/*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'public/dist', 'index.html'));
+// });
+app.get('/albums', album);
+
+
+
+
+app.use('/api/album/filemanager', albumRoutes)
 
 // Apply authentication middleware to the base path
 app.use(ensureAuthenticated);
@@ -107,8 +124,15 @@ app.use("/api/filemanager", fileManagerRoutes);
 app.use("/api/s3", s3Routes);
 // app.use("/", indexRoutes);
 
-app.use(express.static(path.join(__dirname, "public")));
-app.use(express.static(path.join(__dirname, "public/dist")));
+
+
+// Serve the frontend for myAlbums
+app.get('/myAlbums', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/dist', 'index.html'));
+});
+
+
+
 
 // Serve the frontend for authenticated users
 app.get('*', ensureAuthenticated, (req, res) => {

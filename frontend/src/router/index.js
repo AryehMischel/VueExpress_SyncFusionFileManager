@@ -1,25 +1,22 @@
 import { createRouter, createWebHistory } from 'vue-router';
-import Home from '../views/Home.vue';
+import App from '../App.vue'; 
 
 const routes = [
   {
     path: '/',
-    name: 'Home',
-    component: Home,
+    name: 'FileManager',
+    component: App,
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: Dashboard,
-    meta: { requiresAuth: true },
+    path: '/albums/:token',
+    name: 'Album',
+    component: App,
   },
-  // Add more routes here
 ];
 
 const router = createRouter({
-  history: createWebHistory(process.env.BASE_URL),
+  history: createWebHistory(),
   routes,
 });
 
-
-export default router;
+export default router; //

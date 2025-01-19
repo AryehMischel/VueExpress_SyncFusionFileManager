@@ -4,7 +4,7 @@
       <ejs-filemanager
         id="file-manager"
         ref="fileManagerRef"
-        :ajaxSettings="ajaxSettings"
+        :ajaxSettings="state.ajaxSettings"
         :contextMenuSettings="contextMenuSettings"
         :toolbarSettings="state.toolbarSettings"
         :view="view"
@@ -21,7 +21,7 @@
         @fileLoad="(args) => eventHandlers.onFileLoad(args)"
         @created="(args) => eventHandlers.onCreated(args)"
       ></ejs-filemanager>
-    <div id="dynamic-container"></div>
+      <div id="dynamic-container"></div>
     </div>
     <div v-else>
       <p>Loading...</p>
@@ -29,13 +29,18 @@
   </div>
 </template>
 
-
-
-
 <script setup>
-import { ref, reactive, computed, onMounted, provide, nextTick } from "vue";
-
-import { createApp, h } from 'vue';
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  provide,
+  nextTick,
+  watch,
+} from "vue";
+import { useRoute } from "vue-router";
+import { createApp, h } from "vue";
 import {
   FileManagerComponent as EjsFilemanager,
   DetailsView,
@@ -45,9 +50,12 @@ import {
 
 // import { ProgressBarComponent as EjsProgressbar } from "@syncfusion/ej2-vue-progressbar";
 import { registerLicense } from "@syncfusion/ej2-base";
-import { ProgressBarComponent as EjsProgressbar, ProgressBarPlugin } from "@syncfusion/ej2-vue-progressbar";
+import {
+  ProgressBarComponent as EjsProgressbar,
+  ProgressBarPlugin,
+} from "@syncfusion/ej2-vue-progressbar";
 import { createWebWorkers } from "./workers/workerManager.js";
-import { getMainStore } from './store/main';
+import { getMainStore } from "./store/main";
 import * as nonVREventHandlers from "./eventHandlers.js";
 import * as VREventHandlers from "./eventHandlersVR.js";
 
@@ -65,19 +73,33 @@ import {
   detailsViewSettings as detailsViewSettingsVR,
   toolbarSettings as toolbarSettingsVR,
 } from "./fileManagerSettingsVR.js";
-import { logger } from "sequelize/lib/utils/logger";
 
+import {
+  detailsViewSettings as detailsViewSettingsVRAlbum,
+  toolbarSettings as toolbarSettingsVRAlbum,
+} from "./albumFileManagerSettingsVR.js";
+
+import {
+  ajaxSettings as ajaxSettingsAlbum,
+  toolbarSettings as toolbarSettingsAlbum,
+  contextMenuSettings as contextMenuSettingsAlbum,
+  view as viewSettingsAlbum,
+  detailsViewSettings as detailsViewSettingsAlbum,
+  breadcrumbBarSettings as breadcrumbBarSettingsAlbum,
+  uploadSettings as uploadSettingsAlbum,
+} from "./albumFileManagerSettings.js";
+
+import Logger from "./utils/logger";
 
 const fileManagerRef = ref(null);
 const isInitialized = ref(false);
-
+const route = useRoute(); //
+const fullPath = computed(() => route.fullPath);
 
 const onToolbarClick = (args) => {
   console.log(args);
-  if (args.item.properties.text === 'customButton') {
-
-    console.log('Custom button clicked');
-
+  if (args.item.properties.text === "customButton") {
+    console.log("Custom button clicked");
   }
 };
 
@@ -85,7 +107,7 @@ const state = reactive({
   ajaxSettings: {},
   contextMenuSettings: {},
   toolbarSettings: {},
-  view: 'Details',
+  view: "Details",
   breadcrumbBarSettings: {},
   detailsViewSettings: {},
   uploadSettings: {},
@@ -93,29 +115,23 @@ const state = reactive({
 
 provide("filemanager", [DetailsView, BreadCrumbBar, Toolbar]);
 let store;
-
+let logger;
 const initializeApp = async () => {
-  // await new Promise(resolve => setTimeout(resolve, 2000));
   state.ajaxSettings = ajaxSettings;
   state.contextMenuSettings = contextMenuSettings;
   state.breadcrumbBarSettings = breadcrumbBarSettings;
   state.uploadSettings = uploadSettings;
   await store.checkVRDevice();
-
   //get vr state
   let vrState = store.getIsVR;
   console.log(`VR state: ${vrState}`);
-  if(vrState){
+  if (vrState) {
     state.detailsViewSettings = detailsViewSettingsVR;
-    state.toolbarSettings = toolbarSettingsVR
-  }else{
+    state.toolbarSettings = toolbarSettingsVR;
+  } else {
     state.detailsViewSettings = detailsViewSettings;
-    state.toolbarSettings = toolbarSettings
-
+    state.toolbarSettings = toolbarSettings;
   }
-  //set display vioew
-
-  // state.detailsViewSettings = detailsViewSettings;
 
   isInitialized.value = true;
 };
@@ -126,12 +142,12 @@ const attachProgressBar = (target, id) => {
     const app = createApp({
       render() {
         return h(EjsProgressbar, {
-          type: 'Linear',
-          height: '20px',
-          width: '100px',
-          value: store.getProgressValues[id] ?? 0,// Use reactive state
+          type: "Linear",
+          height: "20px",
+          width: "100px",
+          value: store.getProgressValues[id] ?? 0, // Use reactive state
         });
-      }
+      },
     });
     app.use(ProgressBarPlugin);
     app.mount(target);
@@ -149,21 +165,58 @@ const detachProgressBar = (target) => {
 window.attachProgressBar = attachProgressBar;
 window.detachProgressBar = detachProgressBar;
 
-
 registerLicense(import.meta.env.VITE_SYNCFUSION_LICENSE_KEY);
 
 onMounted(async () => {
+  logger = new Logger("Ape Logger")
   store = getMainStore();
-  await initializeApp();
+  // await initializeApp();
+  watch(
+    fullPath,
+    async (newPath) => {
+      if (newPath.startsWith("/albums/")) {
+        console.log("its an album")
+        if (!store.getIsAlbum) {
+          console.log("reset all ui")
+          store.setAlbum(true);
+          state.ajaxSettings = ajaxSettingsAlbum;
+          state.contextMenuSettings = contextMenuSettingsAlbum;
+          state.breadcrumbBarSettings = breadcrumbBarSettingsAlbum;
+          state.uploadSettings = uploadSettingsAlbum;
+          state.detailsViewSettings = detailsViewSettingsAlbum;
+          state.toolbarSettings = toolbarSettingsAlbum;
+          await store.checkVRDevice();
+          let vrState = store.getIsVR;
+          if (vrState) {
+            if (vrState) {
+              state.detailsViewSettings = detailsViewSettingsVRAlbum;
+              state.toolbarSettings = toolbarSettingsVRAlbum;
+            } else {
+              state.detailsViewSettings = detailsViewSettingsAlbum;
+              state.toolbarSettings = toolbarSettingsAlbum;
+            }
+          }
+          isInitialized.value = true;
+        }
+      } else {
+        console.log("it is certainly not an album")
+        if (store.getIsAlbum) {
+          store.setAlbum(false);
+        }
+
+        await initializeApp();
+      }
+    },
+    { immediate: true }
+  );
+
   initializeScene();
   createWebWorkers();
   const fileManagerInstance = fileManagerRef.value?.ej2Instances;
   window.fileManagerInstance = fileManagerInstance;
   if (fileManagerInstance) {
-
     window.refreshFileManager = () => {
       fileManagerInstance.refreshFiles();
-
     };
     window.refreshLayout = () => {
       fileManagerInstance.refreshLayout();
@@ -190,9 +243,6 @@ onMounted(async () => {
   } else {
     logger.error("FileManager instance not found");
   }
-
-
-
 });
 
 const isVR = computed(() => store.isVR);
@@ -212,26 +262,22 @@ const fileManagerSettings = computed(() => {
     };
   }
 });
-
-
 </script>
 
 <style>
 @import "https://cdn.syncfusion.com/ej2/27.1.48/fabric-dark.css";
 
-
 /* Override Syncfusion styles */
 .e-grid .e-gridheader {
-    background-color: #dc0000;
-    color: #fff;
-    border-bottom-color: #785dc8;
-    border-top-color: #785dc8;
+  background-color: #dc0000;
+  color: #fff;
+  border-bottom-color: #785dc8;
+  border-top-color: #785dc8;
 }
 
 /* Make the grid semi-transparent */
 .e-grid {
-    opacity: 0.8; /* Adjust the opacity value as needed */
+  opacity: 0.8;
+  /* Adjust the opacity value as needed */
 }
-
 </style>
-
