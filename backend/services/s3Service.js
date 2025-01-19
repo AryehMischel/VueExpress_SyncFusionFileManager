@@ -40,6 +40,10 @@ export async function generateUploadURL(extension, imageFormat) {
 }
 
 
+export async function deleteObjectFromS3(outputObjects, originalObjects) {
+
+
+}
 // export const getS3URL = async (req) => {
 //   console.log("getting s3 urls...");
 //   //eqrt: 1, stereoEqrt: 2, cubemap: 6, stereoCubemap: 12

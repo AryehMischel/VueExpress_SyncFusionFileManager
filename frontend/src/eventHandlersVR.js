@@ -154,7 +154,6 @@ export const onFileLoad = async (args) => {
   await new Promise((resolve) => setTimeout(resolve, 100)); // Wait for 1 second
 
   let rowGroup = await getRowGroup();
-  logger.log("Row group:", rowGroup);
   let element = args.element;
 
   rowGroup.appendChild(args.element);

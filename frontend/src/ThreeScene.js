@@ -70,6 +70,7 @@ let scene,
 
 //vr ui stuff
 let vrui;
+let stats;
 let rowGroup;
 let currSelectedItem = null;
 window.currSelectedItem = currSelectedItem;
@@ -79,7 +80,7 @@ window.currSelectedItem = currSelectedItem;
 let logger = new Logger("ThreeScene", true);
 let store;
 
-let stats = null;
+
 
 
 try {
@@ -110,11 +111,6 @@ async function initializeScene() {
 }
 
 window.initializeScene = initializeScene;
-
-
-
-// const stats = new Stats();
-// document.body.appendChild(stats.dom);
 
 
 //create scene, add lights
@@ -478,26 +474,21 @@ function loadInArrows() {
       // Add a cylinder mesh for interactions
       const cylinderGeometry = new CylinderGeometry(0.125, 0.125, 0.125, 32);
 
-      const cylinderMaterial = new MeshBasicMaterial({
-        // color: 0xff0000,
-        // wireframe: true,
+      const debugMaterial = new MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
+        opacity: 0.0,
         transparent: true,
-        opacity: 0,
       });
 
-      // x: -1.25, y: 1, z: -1.25}
-      // x: 1.5, _y: 0, _z: -1.2
 
-      // //right
-      // x: -1.5, y: 1, z: -0.5}
-      // -1.5, _y: 0, _z: 1.15
 
-      interactionMesh1 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh1 = new Mesh(cylinderGeometry, debugMaterial.clone());
       interactionMesh1.position.set(-1.55, 1, -0.75);
       interactionMesh1.userData.name = "rightArrow";
       interactionMesh1.userData.interactive = true; // Mark as interactive
 
-      interactionMesh2 = new Mesh(cylinderGeometry, cylinderMaterial);
+      interactionMesh2 = new Mesh(cylinderGeometry, debugMaterial.clone());
       interactionMesh2.position.set(-1.0, 1, -1.55);
       interactionMesh2.userData.name = "leftArrow";
       interactionMesh2.userData.interactive = true; // Mark as interactive
@@ -571,14 +562,14 @@ function loadInReturnArrow() {
       // Add a cylinder mesh for interactions
       const cylinderGeometry = new BoxGeometry(0.1, 0.3, 0.3);
 
-      const cylinderMaterial = new MeshBasicMaterial({
-        // color: 0xff0000,
-        // wireframe: true,
+      const debugMaterial = new MeshBasicMaterial({
+        color: 0xff0000,
+        wireframe: true,
         opacity: 0.0,
         transparent: true,
       });
 
-      returnArrow = new Mesh(cylinderGeometry, cylinderMaterial);
+      returnArrow = new Mesh(cylinderGeometry, debugMaterial);
       // returnArrow.rotation.x = Math.PI / 2;
       returnArrow.position.set(-1.5, 1, -1.5);
       returnArrow.userData.name = "returnArrow";
@@ -613,6 +604,11 @@ loadInArrows();
 loadInReturnArrow();
 
 function swapUI() {
+
+  if(!renderer.xr.isPresenting){
+    console.log("not in vr");
+    return;
+  }
   if (vrui.visible) {
     hideInteractiveElements([vrui], group);
     unhideInteractiveElements([interactionMesh1, interactionMesh2, returnArrow], group);
@@ -654,7 +650,38 @@ function createCustomMaterial() {
   rightArrowNode.material = rightArrowShader;
 }
 
-window.createCustomMaterial = createCustomMaterial;
+
+
+ 
+
+
+function setDebug(debug){
+  if(debug){
+    stats = new Stats();
+    document.body.appendChild(stats.dom);
+  } else{
+    if(stats){
+      document.body.removeChild(stats.dom);
+      stats = null;
+    }
+  }
+  toggleTransparency([returnArrow, interactionMesh1, interactionMesh2], !debug);
+}
+
+
+
+function toggleTransparency(elements, transparency){
+  elements.forEach(element => {
+    element.material.transparent = transparency;
+    element.material.opacity = transparency ? 0.0 : 1;
+    element.material.needsUpdate = true;
+
+  });
+}
+
+
+window.setDebug = setDebug;
+
 
 
 export { scene, renderer };
