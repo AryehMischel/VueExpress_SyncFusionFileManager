@@ -101,18 +101,16 @@ app.get('/blocked', (req, res) => {
 app.use('/auth', authRoutes);
 
 // // app.use('/', album);
-app.use('/album', albumRoutes);
+app.use('/', albumRoutes);
 
 app.use(express.static(path.join(__dirname, "public")));
 app.use(express.static(path.join(__dirname, "public/dist")));
 
 
+app.get('/albums', album);
 // app.get('/albums/*', (req, res) => {
 //   res.sendFile(path.join(__dirname, 'public/dist', 'index.html'));
 // });
-app.get('/albums', album);
-
-
 
 
 app.use('/api/album/filemanager', albumRoutes)

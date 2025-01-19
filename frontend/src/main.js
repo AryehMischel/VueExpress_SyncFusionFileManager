@@ -20,3 +20,6 @@ app.mount('#app');
 // Mount the settings bar
 const settingsApp = createApp(Settings);
 settingsApp.mount('#settings');
+
+const albumApp = createApp(AlbumComponent);
+albumApp.mount('#album');
